@@ -112,7 +112,7 @@ for HOST in "${COLAB_HOSTS[@]}"; do
                 CSV_FILE="${HOST_DIR}/gpu${GPU_ID}_${DATE}.csv"
                 if [ -f "$CSV_FILE" ]; then
                     # 計算此 GPU 的平均使用率
-                    GPU_AVG=$(awk -F, '{sum+=$3; count++} END {if(count>0) print sum/count; else print "N/A"}' "$CSV_FILE")
+                    GPU_AVG=$(awk -F, '{sum+=$3; count++} END {if(count>0) printf "%.2f\n", sum/count; else print "N/A"}' "$CSV_FILE")
                     
                     # 確認數值有效
                     if [ "$GPU_AVG" != "N/A" ] && [ "$GPU_AVG" != "" ]; then
