@@ -117,38 +117,66 @@ for HOST in "${COLAB_HOSTS[@]}"; do
                 # 查找 CSV 檔案
                 CSV_FILE="${HOST_DIR}/gpu${GPU_ID}_${DATE}.csv"
                 if [ -f "$CSV_FILE" ]; then
-                    # 計算此 GPU 的平均使用率
-                    GPU_AVG=$(awk -F, 'NR>1 {sum+=$3; count++} END {if(count>0) print sum/count; else print "N/A"}' "$CSV_FILE")
+                    # 計算此 GPU 的平均使用率（使用 printf 格式化為固定小數格式）
+                    GPU_AVG=$(awk -F, 'NR>1 {sum+=$3; count++} END {if(count>0) printf "%.6f", sum/count; else print "N/A"}' "$CSV_FILE")
                     
-                    # 計算此 GPU 的平均 VRAM 使用率 (第四欄)
-                    VRAM_AVG=$(awk -F, 'NR>1 {sum+=$4; count++} END {if(count>0) print sum/count; else print "N/A"}' "$CSV_FILE")
+                    # 計算此 GPU 的平均 VRAM 使用率 (第四欄)（使用 printf 格式化為固定小數格式）
+                    VRAM_AVG=$(awk -F, 'NR>1 {sum+=$4; count++} END {if(count>0) printf "%.6f", sum/count; else print "N/A"}' "$CSV_FILE")
                     
-                    # 確認數值有效
-                    if [ "$GPU_AVG" != "N/A" ] && [ "$GPU_AVG" != "" ]; then
-                        NODE_DAILY_TOTALS["${HOST}_${DATE}"]=$(echo "${NODE_DAILY_TOTALS["${HOST}_${DATE}"]} + $GPU_AVG" | bc)
+                    # 定義 GPU_NODE_KEY，避免在使用前未定義
+                    GPU_NODE_KEY="${HOST}_${GPU_ID}"
+                    
+                    # 確認 GPU_AVG 是有效的數值，並進行安全的算術運算
+                    if [[ "$GPU_AVG" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                        # 檢查並確保 NODE_DAILY_TOTALS 中的值是有效數字，否則重置為0
+                        current_total="${NODE_DAILY_TOTALS["${HOST}_${DATE}"]}"
+                        if ! [[ "$current_total" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                            current_total="0"
+                        fi
+                        
+                        # 使用 awk 進行加法，避免 bc 的語法錯誤
+                        NODE_DAILY_TOTALS["${HOST}_${DATE}"]=$(awk -v a="$current_total" -v b="$GPU_AVG" 'BEGIN {printf "%.6f", a+b}')
                         NODE_DAILY_COUNTS["${HOST}_${DATE}"]=$((${NODE_DAILY_COUNTS["${HOST}_${DATE}"]} + 1))
                         
-                        # 記錄每個 GPU 在每個節點的使用率總和和計數
-                        GPU_NODE_KEY="${HOST}_${GPU_ID}"
-                        GPU_NODE_TOTALS[$GPU_NODE_KEY]=$(echo "${GPU_NODE_TOTALS[$GPU_NODE_KEY]:-0} + $GPU_AVG" | bc)
+                        # 檢查並確保 GPU_NODE_TOTALS 中的值是有效數字，否則重置為0
+                        current_gpu_total="${GPU_NODE_TOTALS[$GPU_NODE_KEY]:-0}"
+                        if ! [[ "$current_gpu_total" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                            current_gpu_total="0"
+                        fi
+                        
+                        # 使用 awk 進行加法，避免 bc 的語法錯誤
+                        GPU_NODE_TOTALS[$GPU_NODE_KEY]=$(awk -v a="$current_gpu_total" -v b="$GPU_AVG" 'BEGIN {printf "%.6f", a+b}')
                         GPU_NODE_COUNTS[$GPU_NODE_KEY]=$((${GPU_NODE_COUNTS[$GPU_NODE_KEY]:-0} + 1))
                     fi
                     
-                    # 處理 VRAM 使用率數據
-                    if [ "$VRAM_AVG" != "N/A" ] && [ "$VRAM_AVG" != "" ]; then
-                        NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]=$(echo "${NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]} + $VRAM_AVG" | bc)
+                    # 處理 VRAM 使用率數據，使用相同的安全檢查和 awk 運算
+                    if [[ "$VRAM_AVG" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                        # 檢查並確保 NODE_DAILY_VRAM_TOTALS 中的值是有效數字，否則重置為0
+                        current_vram_total="${NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]}"
+                        if ! [[ "$current_vram_total" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                            current_vram_total="0"
+                        fi
+                        
+                        # 使用 awk 進行加法，避免 bc 的語法錯誤
+                        NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]=$(awk -v a="$current_vram_total" -v b="$VRAM_AVG" 'BEGIN {printf "%.6f", a+b}')
                         # 記錄每個 GPU 在每個節點的 VRAM 使用率總和
-                        GPU_NODE_KEY="${HOST}_${GPU_ID}"
-                        GPU_NODE_VRAM_TOTALS[$GPU_NODE_KEY]=$(echo "${GPU_NODE_VRAM_TOTALS[$GPU_NODE_KEY]:-0} + $VRAM_AVG" | bc)
+                        # 檢查並確保 GPU_NODE_VRAM_TOTALS 中的值是有效數字，否則重置為0
+                        current_gpu_vram_total="${GPU_NODE_VRAM_TOTALS[$GPU_NODE_KEY]:-0}"
+                        if ! [[ "$current_gpu_vram_total" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                            current_gpu_vram_total="0"
+                        fi
+                        
+                        # 使用 awk 進行加法，避免 bc 的語法錯誤
+                        GPU_NODE_VRAM_TOTALS[$GPU_NODE_KEY]=$(awk -v a="$current_gpu_vram_total" -v b="$VRAM_AVG" 'BEGIN {printf "%.6f", a+b}')
                     fi
                 fi
             done
             
             # 計算此節點此日期的平均值
             if [ "${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" -gt 0 ]; then
-                # 使用 awk 確保數值格式正確 (總是有小數點前的數字)
-                DAILY_AVG=$(echo "scale=6; ${NODE_DAILY_TOTALS["${HOST}_${DATE}"]} / ${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" | bc)
-                DAILY_VRAM_AVG=$(echo "scale=6; ${NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]} / ${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" | bc)
+                # 使用 awk 進行除法運算，避免 bc 的語法錯誤
+                DAILY_AVG=$(awk -v total="${NODE_DAILY_TOTALS["${HOST}_${DATE}"]}" -v count="${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" 'BEGIN {printf "%.6f", total/count}')
+                DAILY_VRAM_AVG=$(awk -v total="${NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]}" -v count="${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" 'BEGIN {printf "%.6f", total/count}')
                 # 修正數值格式，確保小數點前有數字
                 FORMATTED_AVG=$(awk -v avg="$DAILY_AVG" 'BEGIN {printf "%.2f", avg}')
                 FORMATTED_VRAM_AVG=$(awk -v avg="$DAILY_VRAM_AVG" 'BEGIN {printf "%.2f", avg}')
@@ -158,15 +186,33 @@ for HOST in "${COLAB_HOSTS[@]}"; do
                 RAW_VAL=$(echo "$FORMATTED_AVG" | sed 's/,/./g')
                 RAW_VRAM_VAL=$(echo "$FORMATTED_VRAM_AVG" | sed 's/,/./g')
                 
-                # 更新節點總計 (使用格式化的數值確保一致性)
-                NODE_TOTALS[$HOST]=$(echo "${NODE_TOTALS[$HOST]} + $RAW_VAL" | bc)
-                NODE_COUNTS[$HOST]=$((${NODE_COUNTS[$HOST]} + 1))
-                NODE_VRAM_TOTALS[$HOST]=$(echo "${NODE_VRAM_TOTALS[$HOST]} + $RAW_VRAM_VAL" | bc)
+                # 檢查並確保節點總計變數的值是有效數字
+                current_node_total="${NODE_TOTALS[$HOST]}"
+                if ! [[ "$current_node_total" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                    current_node_total="0"
+                fi
+                current_node_vram_total="${NODE_VRAM_TOTALS[$HOST]}"
+                if ! [[ "$current_node_vram_total" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                    current_node_vram_total="0"
+                fi
                 
-                # 更新總計 - 使用相同的格式化數值
-                TOTAL_SUM=$(echo "$TOTAL_SUM + $RAW_VAL" | bc)
+                # 使用 awk 進行加法，避免 bc 的語法錯誤
+                NODE_TOTALS[$HOST]=$(awk -v a="$current_node_total" -v b="$RAW_VAL" 'BEGIN {printf "%.6f", a+b}')
+                NODE_COUNTS[$HOST]=$((${NODE_COUNTS[$HOST]} + 1))
+                NODE_VRAM_TOTALS[$HOST]=$(awk -v a="$current_node_vram_total" -v b="$RAW_VRAM_VAL" 'BEGIN {printf "%.6f", a+b}')
+                
+                # 檢查並確保總計變數的值是有效數字
+                if ! [[ "$TOTAL_SUM" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                    TOTAL_SUM="0"
+                fi
+                if ! [[ "$TOTAL_VRAM_SUM" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                    TOTAL_VRAM_SUM="0"
+                fi
+                
+                # 使用 awk 更新總計
+                TOTAL_SUM=$(awk -v a="$TOTAL_SUM" -v b="$RAW_VAL" 'BEGIN {printf "%.6f", a+b}')
                 TOTAL_COUNT=$((TOTAL_COUNT + 1))
-                TOTAL_VRAM_SUM=$(echo "$TOTAL_VRAM_SUM + $RAW_VRAM_VAL" | bc)
+                TOTAL_VRAM_SUM=$(awk -v a="$TOTAL_VRAM_SUM" -v b="$RAW_VRAM_VAL" 'BEGIN {printf "%.6f", a+b}')
                 
                 # 為了顯示目的，使用格式化的數值
                 echo "    $HOST 在 $DATE 的平均使用率: $FORMATTED_AVG%, 平均VRAM使用率: $FORMATTED_VRAM_AVG%"
@@ -180,8 +226,9 @@ for HOST in "${COLAB_HOSTS[@]}"; do
     
     # 計算此節點的總平均值
     if [ "${NODE_COUNTS[$HOST]}" -gt 0 ]; then
-        NODE_AVG=$(echo "scale=6; ${NODE_TOTALS[$HOST]} / ${NODE_COUNTS[$HOST]}" | bc)
-        NODE_VRAM_AVG=$(echo "scale=6; ${NODE_VRAM_TOTALS[$HOST]} / ${NODE_COUNTS[$HOST]}" | bc)
+        # 使用 awk 進行除法運算，避免 bc 的語法錯誤
+        NODE_AVG=$(awk -v total="${NODE_TOTALS[$HOST]}" -v count="${NODE_COUNTS[$HOST]}" 'BEGIN {printf "%.6f", total/count}')
+        NODE_VRAM_AVG=$(awk -v total="${NODE_VRAM_TOTALS[$HOST]}" -v count="${NODE_COUNTS[$HOST]}" 'BEGIN {printf "%.6f", total/count}')
         # 格式化數值
         FORMATTED_NODE_AVG=$(awk -v avg="$NODE_AVG" 'BEGIN {printf "%.2f", avg}')
         FORMATTED_NODE_VRAM_AVG=$(awk -v avg="$NODE_VRAM_AVG" 'BEGIN {printf "%.2f", avg}')
@@ -223,8 +270,9 @@ done
         for GPU_ID in "${GPU_IDS[@]}"; do
             GPU_NODE_KEY="${HOST}_${GPU_ID}"
             if [ "${GPU_NODE_COUNTS[$GPU_NODE_KEY]:-0}" -gt 0 ]; then
-                GPU_AVG=$(echo "scale=6; ${GPU_NODE_TOTALS[$GPU_NODE_KEY]} / ${GPU_NODE_COUNTS[$GPU_NODE_KEY]}" | bc)
-                GPU_VRAM_AVG=$(echo "scale=6; ${GPU_NODE_VRAM_TOTALS[$GPU_NODE_KEY]:-0} / ${GPU_NODE_COUNTS[$GPU_NODE_KEY]}" | bc)
+                # 使用 awk 進行除法運算，避免 bc 的語法錯誤
+                GPU_AVG=$(awk -v total="${GPU_NODE_TOTALS[$GPU_NODE_KEY]}" -v count="${GPU_NODE_COUNTS[$GPU_NODE_KEY]}" 'BEGIN {printf "%.6f", total/count}')
+                GPU_VRAM_AVG=$(awk -v total="${GPU_NODE_VRAM_TOTALS[$GPU_NODE_KEY]:-0}" -v count="${GPU_NODE_COUNTS[$GPU_NODE_KEY]}" 'BEGIN {printf "%.6f", total/count}')
                 # 格式化數值
                 FORMATTED_GPU_AVG=$(awk -v avg="$GPU_AVG" 'BEGIN {printf "%.2f", avg}')
                 FORMATTED_GPU_VRAM_AVG=$(awk -v avg="$GPU_VRAM_AVG" 'BEGIN {printf "%.2f", avg}')
@@ -259,8 +307,9 @@ done
         echo "節點: $HOST"
         for DATE in "${DATES[@]}"; do
             if [ "${NODE_DAILY_COUNTS["${HOST}_${DATE}"]:-0}" -gt 0 ]; then
-                DAILY_AVG=$(echo "scale=6; ${NODE_DAILY_TOTALS["${HOST}_${DATE}"]} / ${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" | bc)
-                DAILY_VRAM_AVG=$(echo "scale=6; ${NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]} / ${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" | bc)
+                # 使用 awk 進行除法運算，避免 bc 的語法錯誤
+                DAILY_AVG=$(awk -v total="${NODE_DAILY_TOTALS["${HOST}_${DATE}"]}" -v count="${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" 'BEGIN {printf "%.6f", total/count}')
+                DAILY_VRAM_AVG=$(awk -v total="${NODE_DAILY_VRAM_TOTALS["${HOST}_${DATE}"]}" -v count="${NODE_DAILY_COUNTS["${HOST}_${DATE}"]}" 'BEGIN {printf "%.6f", total/count}')
                 # 格式化數值
                 FORMATTED_DAILY_AVG=$(awk -v avg="$DAILY_AVG" 'BEGIN {printf "%.2f", avg}')
                 FORMATTED_DAILY_VRAM_AVG=$(awk -v avg="$DAILY_VRAM_AVG" 'BEGIN {printf "%.2f", avg}')
