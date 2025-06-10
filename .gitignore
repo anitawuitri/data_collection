@@ -1,2 +1,55 @@
-data
+# 數據目錄
+data/
+plots/
+
+# 日誌檔案
 *.log
+gpu_log_cron.log
+
+# Python 相關
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虛擬環境
+.venv/
+venv/
+env/
+ENV/
+
+# IDE 相關
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 作業系統相關
+.DS_Store
+Thumbs.db
+
+# 暫存檔案
+*.tmp
+*.bak
+*.backup
+
+# 歷史備份檔案
+archive_*.zip
