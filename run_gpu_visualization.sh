@@ -10,6 +10,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VISUALIZATION_DIR="$SCRIPT_DIR/visualization"
 DATA_DIR="$SCRIPT_DIR/data"
 PLOTS_DIR="$SCRIPT_DIR/plots"
+VENV_DIR="$SCRIPT_DIR/.venv"
+
+# 檢查並激活虛擬環境
+if [ -d "$VENV_DIR" ]; then
+    source "$VENV_DIR/bin/activate"
+    PYTHON_CMD="python3"
+    PIP_CMD="pip3"
+else
+    PYTHON_CMD="python3"
+    PIP_CMD="pip3"
+fi
 
 # 顏色輸出函數
 print_info() {
@@ -35,19 +46,28 @@ echo ""
 check_requirements() {
     print_info "檢查 Python 環境和依賴套件..."
     
-    if ! command -v python3 &> /dev/null; then
-        print_error "未找到 python3，請安裝 Python 3"
+    if ! command -v $PYTHON_CMD &> /dev/null; then
+        print_error "未找到 $PYTHON_CMD，請安裝 Python 3"
         exit 1
     fi
     
     # 檢查必要的 Python 套件
-    python3 -c "import pandas, matplotlib, numpy, seaborn" 2>/dev/null || {
+    $PYTHON_CMD -c "import pandas, matplotlib, numpy, seaborn" 2>/dev/null || {
         print_warning "缺少必要的 Python 套件，正在安裝..."
-        pip3 install -r "$SCRIPT_DIR/requirements.txt" || {
-            print_error "安裝 Python 套件失敗"
-            print_info "請手動執行: pip3 install pandas matplotlib numpy seaborn"
+        
+        # 如果使用虛擬環境，直接安裝；否則提示用戶
+        if [ -d "$VENV_DIR" ] && [ -n "$VIRTUAL_ENV" ]; then
+            $PIP_CMD install -r "$SCRIPT_DIR/requirements.txt" || {
+                print_error "安裝 Python 套件失敗"
+                exit 1
+            }
+        else
+            print_error "需要安裝 Python 套件，請執行以下命令之一："
+            print_info "1. 使用虛擬環境: source .venv/bin/activate && pip3 install -r requirements.txt"
+            print_info "2. 系統安裝: pip3 install --user pandas matplotlib numpy seaborn"
+            print_info "3. 如果需要系統級安裝: pip3 install --break-system-packages pandas matplotlib numpy seaborn"
             exit 1
-        }
+        fi
     }
     
     print_success "Python 環境檢查完成"
@@ -129,9 +149,19 @@ run_quick() {
     print_info "快速生成所有常用 GPU 趨勢圖..."
     
     if [ -z "$start_date" ] || [ -z "$end_date" ]; then
-        python3 "$VISUALIZATION_DIR/quick_gpu_trend_plots.py"
+        $PYTHON_CMD -c "
+import sys
+sys.path.append('$VISUALIZATION_DIR')
+from quick_gpu_trend_plots import generate_all_quick_plots
+generate_all_quick_plots(data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+"
     else
-        python3 "$VISUALIZATION_DIR/quick_gpu_trend_plots.py" "$start_date" "$end_date"
+        $PYTHON_CMD -c "
+import sys
+sys.path.append('$VISUALIZATION_DIR')
+from quick_gpu_trend_plots import generate_all_quick_plots
+generate_all_quick_plots('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+"
     fi
     
     print_success "快速圖表生成完成"
@@ -150,11 +180,11 @@ run_nodes() {
     
     print_info "生成節點對比趨勢圖..."
     
-    python3 -c "
+    $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import quick_nodes_trend
-quick_nodes_trend('$start_date', '$end_date')
+quick_nodes_trend('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
 "
     
     print_success "節點對比圖生成完成"
@@ -174,11 +204,11 @@ run_node() {
     
     print_info "生成 $node 所有 GPU 趨勢圖..."
     
-    python3 -c "
+    $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import quick_single_node_gpus
-quick_single_node_gpus('$node', '$start_date', '$end_date')
+quick_single_node_gpus('$node', '$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
 "
     
     print_success "$node 所有 GPU 趨勢圖生成完成"
@@ -198,11 +228,11 @@ run_gpu() {
     
     print_info "生成 GPU $gpu_id 跨節點對比圖..."
     
-    python3 -c "
+    $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import quick_gpu_across_nodes
-quick_gpu_across_nodes($gpu_id, '$start_date', '$end_date')
+quick_gpu_across_nodes($gpu_id, '$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
 "
     
     print_success "GPU $gpu_id 跨節點對比圖生成完成"
@@ -244,11 +274,11 @@ run_examples() {
 run_auto() {
     print_info "自動模式：偵測可用數據並生成所有圖表..."
     
-    python3 -c "
+    $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import generate_all_quick_plots
-generate_all_quick_plots()
+generate_all_quick_plots(data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
 "
     
     print_success "自動模式完成"

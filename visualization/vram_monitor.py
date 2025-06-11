@@ -26,7 +26,7 @@ from font_config import setup_chinese_font
 setup_chinese_font()
 
 class VRAMMonitor:
-    def __init__(self, data_dir="../data", plots_dir="../plots"):
+    def __init__(self, data_dir=None, plots_dir=None):
         """
         初始化 VRAM 監控器
         
@@ -34,6 +34,23 @@ class VRAMMonitor:
             data_dir (str): 數據目錄路徑
             plots_dir (str): 圖表輸出目錄路徑
         """
+        # 自動偵測目錄路徑
+        if data_dir is None:
+            if os.path.exists("./data"):
+                data_dir = "./data"
+            elif os.path.exists("../data"):
+                data_dir = "../data"
+            else:
+                data_dir = "./data"
+                
+        if plots_dir is None:
+            if os.path.exists("./plots"):
+                plots_dir = "./plots"
+            elif os.path.exists("../plots"):
+                plots_dir = "../plots"
+            else:
+                plots_dir = "./plots"
+        
         # 轉換為絕對路徑
         self.data_dir = os.path.abspath(data_dir)
         self.plots_dir = os.path.abspath(plots_dir)
@@ -52,7 +69,7 @@ class VRAMMonitor:
         
     def collect_vram_data(self, node, gpu_id, date_str=None):
         """
-        從 Netdata 收集指定節點和 GPU 的 VRAM 使用量數據
+        從現有 CSV 檔案收集指定節點和 GPU 的 VRAM 使用量數據
         
         Args:
             node (str): 節點名稱
@@ -65,70 +82,43 @@ class VRAMMonitor:
         if date_str is None:
             date_str = datetime.now().strftime('%Y-%m-%d')
             
-        if node not in self.node_ips:
+        if node not in self.nodes:
             print(f"未知節點: {node}")
             return pd.DataFrame()
             
-        ip = self.node_ips[node]
-        
         try:
-            # 計算時間範圍（當天的開始和結束）
-            start_time = int(datetime.strptime(f"{date_str} 00:00:00", "%Y-%m-%d %H:%M:%S").timestamp())
-            end_time = int(datetime.strptime(f"{date_str} 23:59:59", "%Y-%m-%d %H:%M:%S").timestamp())
+            # 構建 CSV 檔案路徑
+            csv_file = os.path.join(self.data_dir, node, date_str, f'gpu{gpu_id}_{date_str}.csv')
             
-            # Netdata API URL for VRAM usage
-            # 假設 VRAM 數據在 amdgpu_mem chart 中
-            url = f"http://{ip}:19999/api/v1/data"
-            params = {
-                'chart': f'amdgpu_mem.gpu{gpu_id}',
-                'after': start_time,
-                'before': end_time,
-                'format': 'json',
-                'points': 1440  # 每分鐘一個點，一天1440個點
-            }
-            
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            if 'data' not in data:
-                print(f"節點 {node} GPU {gpu_id} 沒有 VRAM 數據")
+            if not os.path.exists(csv_file):
+                print(f"找不到 CSV 檔案: {csv_file}")
                 return pd.DataFrame()
                 
-            # 解析數據
-            timestamps = []
-            vram_used = []
-            vram_total = []
+            # 讀取 CSV 檔案
+            df = pd.read_csv(csv_file)
             
-            for row in data['data']:
-                timestamp = row[0]
-                # 假設第一個值是已使用 VRAM，第二個值是總 VRAM
-                if len(row) >= 3:
-                    used = row[1] if row[1] is not None else 0
-                    total = row[2] if row[2] is not None else 0
-                    
-                    timestamps.append(datetime.fromtimestamp(timestamp))
-                    vram_used.append(used / (1024**3))  # 轉換為 GB
-                    vram_total.append(total / (1024**3))  # 轉換為 GB
-            
-            if not timestamps:
+            # 檢查必要的欄位
+            if 'VRAM使用率(%)' not in df.columns:
+                print(f"CSV 檔案中沒有 VRAM使用率(%) 欄位: {csv_file}")
                 return pd.DataFrame()
                 
-            df = pd.DataFrame({
-                'timestamp': timestamps,
-                'vram_used_gb': vram_used,
-                'vram_total_gb': vram_total,
-                'vram_usage_percent': [used/total*100 if total > 0 else 0 for used, total in zip(vram_used, vram_total)]
-            })
+            if '日期時間' not in df.columns:
+                print(f"CSV 檔案中沒有 日期時間 欄位: {csv_file}")
+                return pd.DataFrame()
             
-            return df
+            # 轉換時間格式
+            df['datetime'] = pd.to_datetime(df['日期時間'])
+            df['vram_usage'] = df['VRAM使用率(%)']
             
-        except requests.RequestException as e:
-            print(f"收集 {node} GPU {gpu_id} VRAM 數據時發生錯誤: {e}")
-            return pd.DataFrame()
+            # 只保留需要的欄位
+            result_df = df[['datetime', 'vram_usage']].copy()
+            result_df = result_df.dropna()
+            
+            print(f"成功從 {csv_file} 載入 {len(result_df)} 筆 VRAM 資料")
+            return result_df
+            
         except Exception as e:
-            print(f"處理 {node} GPU {gpu_id} VRAM 數據時發生錯誤: {e}")
+            print(f"收集 {node} GPU {gpu_id} VRAM 數據時發生錯誤: {e}")
             return pd.DataFrame()
 
     def save_vram_data(self, node, gpu_id, date_str=None):
@@ -172,47 +162,30 @@ class VRAMMonitor:
         Returns:
             str: 圖表檔案路徑（如果保存）
         """
-        # 嘗試從現有數據讀取
-        csv_file = os.path.join(self.data_dir, node, date_str, f"gpu{gpu_id}_vram_{date_str}.csv")
-        
-        if os.path.exists(csv_file):
-            df = pd.read_csv(csv_file)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-        else:
-            df = self.collect_vram_data(node, gpu_id, date_str)
+        df = self.collect_vram_data(node, gpu_id, date_str)
             
         if df.empty:
             print(f"沒有 {node} GPU {gpu_id} 在 {date_str} 的 VRAM 數據")
             return None
             
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
+        fig, ax = plt.subplots(1, 1, figsize=(15, 8))
         
-        # 上圖：VRAM 使用量 (GB)
-        ax1.plot(df['timestamp'], df['vram_used_gb'], label='已使用 VRAM', color='#d62728', linewidth=2)
-        ax1.plot(df['timestamp'], df['vram_total_gb'], label='總 VRAM', color='#2ca02c', linewidth=2, linestyle='--')
-        ax1.fill_between(df['timestamp'], df['vram_used_gb'], alpha=0.3, color='#d62728')
+        # VRAM 使用率圖表
+        ax.plot(df['datetime'], df['vram_usage'], label=f'{node} GPU {gpu_id} VRAM 使用率', 
+                color='#1f77b4', linewidth=2)
+        ax.fill_between(df['datetime'], df['vram_usage'], alpha=0.3, color='#1f77b4')
         
-        ax1.set_title(f'{node} GPU {gpu_id} VRAM 使用量 - {date_str}', fontsize=16, fontweight='bold')
-        ax1.set_ylabel('VRAM (GB)', fontsize=12)
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-        
-        # 下圖：VRAM 使用率 (%)
-        ax2.plot(df['timestamp'], df['vram_usage_percent'], label='VRAM 使用率', color='#1f77b4', linewidth=2)
-        ax2.fill_between(df['timestamp'], df['vram_usage_percent'], alpha=0.3, color='#1f77b4')
-        
-        ax2.set_title(f'{node} GPU {gpu_id} VRAM 使用率 - {date_str}', fontsize=16, fontweight='bold')
-        ax2.set_xlabel('時間', fontsize=12)
-        ax2.set_ylabel('VRAM 使用率 (%)', fontsize=12)
-        ax2.set_ylim(0, 100)
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
+        ax.set_title(f'{node} GPU {gpu_id} VRAM 使用率時間序列 - {date_str}', fontsize=16, fontweight='bold')
+        ax.set_xlabel('時間', fontsize=12)
+        ax.set_ylabel('VRAM 使用率 (%)', fontsize=12)
+        ax.set_ylim(0, max(100, df['vram_usage'].max() * 1.1) if not df.empty else 100)
+        ax.legend()
+        ax.grid(True, alpha=0.3)
         
         # 格式化 x 軸
-        for ax in [ax1, ax2]:
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
         
         plt.tight_layout()
         
@@ -258,16 +231,18 @@ class VRAMMonitor:
                 daily_vram_percent = []
                 
                 for gid in gpus_to_check:
-                    csv_file = os.path.join(self.data_dir, node, date_str, f"gpu{gid}_vram_{date_str}.csv")
+                    # 直接使用原始 CSV 檔案，不是 vram 特定檔案
+                    csv_file = os.path.join(self.data_dir, node, date_str, f"gpu{gid}_{date_str}.csv")
                     
                     if os.path.exists(csv_file):
                         try:
                             df = pd.read_csv(csv_file)
-                            if not df.empty:
-                                avg_used = df['vram_used_gb'].mean()
-                                avg_percent = df['vram_usage_percent'].mean()
-                                daily_vram_used.append(avg_used)
+                            if not df.empty and 'VRAM使用率(%)' in df.columns:
+                                avg_percent = df['VRAM使用率(%)'].mean()
                                 daily_vram_percent.append(avg_percent)
+                                # 假設 VRAM 總量為 80GB (MI250X)，計算使用量
+                                avg_used = avg_percent * 80 / 100
+                                daily_vram_used.append(avg_used)
                         except Exception as e:
                             print(f"讀取 {csv_file} 時發生錯誤: {e}")
                 
@@ -343,13 +318,17 @@ class VRAMMonitor:
                 
                 for date in dates:
                     date_str = date.strftime('%Y-%m-%d')
-                    csv_file = os.path.join(self.data_dir, node, date_str, f"gpu{gpu_id}_vram_{date_str}.csv")
+                    # 使用原始 CSV 檔案，不是 vram 特定檔案
+                    csv_file = os.path.join(self.data_dir, node, date_str, f"gpu{gpu_id}_{date_str}.csv")
                     
                     if os.path.exists(csv_file):
                         try:
                             df = pd.read_csv(csv_file)
-                            avg_usage = df['vram_usage_percent'].mean() if not df.empty else 0
-                            daily_usage.append(avg_usage)
+                            if not df.empty and 'VRAM使用率(%)' in df.columns:
+                                avg_usage = df['VRAM使用率(%)'].mean()
+                                daily_usage.append(avg_usage)
+                            else:
+                                daily_usage.append(0)
                         except:
                             daily_usage.append(0)
                     else:
