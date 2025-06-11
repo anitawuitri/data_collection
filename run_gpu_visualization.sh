@@ -13,7 +13,7 @@ PLOTS_DIR="$SCRIPT_DIR/plots"
 VENV_DIR="$SCRIPT_DIR/.venv"
 
 # 檢查並激活虛擬環境
-if [ -d "$VENV_DIR" ]; then
+if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/activate" ]; then
     source "$VENV_DIR/bin/activate"
     PYTHON_CMD="python3"
     PIP_CMD="pip3"
@@ -109,6 +109,7 @@ show_usage() {
     echo "  $0 [選項] [參數]"
     echo ""
     echo "選項:"
+    echo "  setup                           - 創建 Python 虛擬環境並安裝依賴套件"
     echo "  quick [開始日期] [結束日期]     - 快速生成所有常用圖表"
     echo "  nodes [開始日期] [結束日期]     - 生成節點對比趨勢圖"
     echo "  node [節點名稱] [開始日期] [結束日期] - 生成單一節點所有 GPU 趨勢圖"
@@ -130,6 +131,7 @@ show_usage() {
     echo "GPU ID: 1, 9, 17, 25, 33, 41, 49, 57"
     echo ""
     echo "範例:"
+    echo "  $0 setup                         - 初始化 Python 虛擬環境"
     echo "  $0 quick 2025-05-23 2025-05-26"
     echo "  $0 nodes 2025-05-23 2025-05-26"
     echo "  $0 node colab-gpu1 2025-05-23 2025-05-26"
@@ -387,9 +389,94 @@ generate_all_vram_plots('$start_date', '$end_date', data_dir='$DATA_DIR', plots_
     print_success "所有 VRAM 圖表生成完成"
 }
 
+# 創建虛擬環境函數
+create_venv() {
+    print_info "正在創建 Python 虛擬環境..."
+    
+    # 檢查是否已存在虛擬環境
+    if [ -d "$VENV_DIR" ]; then
+        print_warning "虛擬環境已存在於: $VENV_DIR"
+        return 0
+    fi
+    
+    # 檢查 Python 版本
+    if ! command -v python3 &> /dev/null; then
+        print_error "未找到 python3，請先安裝 Python 3.7+"
+        exit 1
+    fi
+    
+    # 檢查 Python 版本是否符合要求 (3.7+)
+    python_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    version_check=$(python3 -c "import sys; print(1 if sys.version_info >= (3, 7) else 0)")
+    if [ "$version_check" = "0" ]; then
+        print_error "Python 版本過舊 ($python_version)，需要 Python 3.7 或更新版本"
+        exit 1
+    fi
+    
+    print_info "使用 Python 版本: $python_version"
+    
+    # 創建虛擬環境
+    print_info "創建虛擬環境到: $VENV_DIR"
+    python3 -m venv "$VENV_DIR" || {
+        print_error "創建虛擬環境失敗"
+        print_info "請確保已安裝 python3-venv 套件:"
+        print_info "Ubuntu/Debian: sudo apt install python3-venv"
+        print_info "CentOS/RHEL: sudo yum install python3-venv"
+        exit 1
+    }
+    
+    # 激活虛擬環境
+    source "$VENV_DIR/bin/activate"
+    
+    # 升級 pip
+    print_info "升級 pip..."
+    pip install --upgrade pip
+    
+    # 安裝依賴套件
+    print_info "安裝 Python 依賴套件..."
+    if [ -f "$SCRIPT_DIR/requirements.txt" ]; then
+        pip install -r "$SCRIPT_DIR/requirements.txt" || {
+            print_error "安裝依賴套件失敗"
+            exit 1
+        }
+    else
+        print_warning "未找到 requirements.txt，安裝基本套件..."
+        pip install pandas matplotlib numpy seaborn || {
+            print_error "安裝基本套件失敗"
+            exit 1
+        }
+    fi
+    
+    # 如果有 visualization/requirements.txt，也安裝它
+    if [ -f "$VISUALIZATION_DIR/requirements.txt" ]; then
+        print_info "安裝視覺化模組的依賴套件..."
+        pip install -r "$VISUALIZATION_DIR/requirements.txt" || {
+            print_warning "安裝視覺化模組依賴套件失敗，但繼續執行..."
+        }
+    fi
+    
+    print_success "虛擬環境創建完成!"
+    print_info "虛擬環境位置: $VENV_DIR"
+    print_info "若要手動激活虛擬環境，請執行: source $VENV_DIR/bin/activate"
+}
+
 # 主程式
 main() {
     local command=$1
+    
+    # 如果是 setup 命令，直接執行而不檢查依賴
+    if [ "$command" = "setup" ]; then
+        create_venv
+        print_success "虛擬環境設置完成！現在可以使用其他選項來生成圖表。"
+        exit 0
+    fi
+    
+    # 如果不是 setup 命令，檢查是否建議建立虛擬環境
+    if [ ! -d "$VENV_DIR" ]; then
+        print_warning "未找到虛擬環境，建議先執行 setup 來創建虛擬環境："
+        print_info "$0 setup"
+        echo ""
+    fi
     
     # 檢查環境
     check_requirements

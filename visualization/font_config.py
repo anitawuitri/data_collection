@@ -18,10 +18,13 @@ def setup_chinese_font():
     """
     # 嘗試不同的中文字體列表（按優先順序）
     chinese_fonts = [
-        'Noto Sans CJK JP',      # 系統可用的 CJK 字體
-        'Noto Sans CJK TC',      # Ubuntu/Debian 繁體中文
+        'Noto Sans CJK TC',      # Ubuntu/Debian 繁體中文（優先）
         'Noto Sans CJK SC',      # Ubuntu/Debian 簡體中文
+        'Noto Sans CJK JP',      # Ubuntu/Debian 日文
+        'Noto Sans CJK KR',      # Ubuntu/Debian 韓文
         'Noto Sans',             # 基本 Noto Sans
+        'Source Han Sans TC',    # 思源黑體繁體
+        'Source Han Sans SC',    # 思源黑體簡體
         'Microsoft YaHei',       # Windows
         'PingFang SC',           # macOS
         'SimHei',                # Windows 預設
