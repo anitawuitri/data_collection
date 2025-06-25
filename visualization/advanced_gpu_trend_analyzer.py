@@ -198,6 +198,9 @@ class GPUUsageTrendAnalyzer:
         ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
         
+        # 設定 y 軸範圍為 0-100%
+        ax.set_ylim(0, 100)
+        
         # 添加圖例和網格
         ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         ax.grid(True, alpha=0.3)

@@ -93,6 +93,9 @@ def quick_nodes_trend(start_date, end_date, data_dir="../data", plots_dir="../pl
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
     
+    # 設定 y 軸範圍為 0-100%
+    ax.set_ylim(0, 100)
+    
     # 添加圖例和網格（只有當有數據時才顯示圖例）
     if ax.get_lines():  # 檢查是否有繪製的線條
         ax.legend()
@@ -179,6 +182,9 @@ def quick_single_node_gpus(node, start_date, end_date, data_dir="../data", plots
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
     
+    # 設定 y 軸範圍為 0-100%
+    ax.set_ylim(0, 100)
+    
     # 添加圖例和網格（只有當有數據時才顯示圖例）
     if ax.get_lines():  # 檢查是否有繪製的線條
         ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -264,6 +270,9 @@ def quick_gpu_across_nodes(gpu_id, start_date, end_date, data_dir="../data", plo
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+    
+    # 設定 y 軸範圍為 0-100%
+    ax.set_ylim(0, 100)
     
     # 添加圖例和網格（只有當有數據時才顯示圖例）
     if ax.get_lines():  # 檢查是否有繪製的線條

@@ -287,6 +287,9 @@ class GPUTrendVisualizer:
         ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
         
+        # 設定 y 軸範圍為 0-100%
+        ax.set_ylim(0, 100)
+        
         # 添加圖例和網格
         ax.legend()
         ax.grid(True, alpha=0.3)
@@ -431,6 +434,9 @@ class GPUTrendVisualizer:
         bars = ax2.bar(node_names, node_averages, color=self.colors[:len(node_names)])
         ax2.set_title('各節點平均使用率統計', fontsize=14, fontweight='bold')
         ax2.set_ylabel('平均 GPU 使用率 (%)')
+        
+        # 設定 y 軸範圍為 0-100%
+        ax2.set_ylim(0, 100)
         
         # 在柱狀圖上添加數值標籤
         for bar, value in zip(bars, node_averages):
