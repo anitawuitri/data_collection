@@ -1,0 +1,42 @@
+{
+    "550": {
+        "uuid": "e60568ac",
+        "username": "itrd",
+        "flavor": {
+            "id": 21,
+            "cpu": 16,
+            "gpu": 2,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 262141
+        },
+        "task": {
+            "id": 147,
+            "uuid": "e60568ac",
+            "_type": "WEBAPP",
+            "project_uuid": "p2d60965",
+            "owner": "itrd",
+            "image": "192.168.10.101:5000/myelintek/ollama:0.6.2-rocm",
+            "create_time": "Tue, 27 May 2025 09:53:35 GMT"
+        },
+        "hostname": "colab-gpu4",
+        "gpus": [
+            {
+                "id": 27,
+                "uuid": "APU-52f67b3700dcc6f3",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            },
+            {
+                "id": 28,
+                "uuid": "APU-fedfa3a312e0f421",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Wed, 16 Jul 2025 08:19:32 GMT",
+        "end": null,
+        "total_seconds": 98181.521645
+    }
+}
