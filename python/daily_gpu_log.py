@@ -35,13 +35,22 @@ class GPUDataCollector:
             "192.168.10.106": "colab-gpu4"
         }
         
-        # 固定 GPU ID 列表
-        self.gpu_ids = [1, 9, 17, 25, 33, 41, 49, 57]
+        # GPU 硬體對應表 (基於 gpu_hardware_mapping.txt)
+        self.gpu_card_to_index = {
+            1: 0, 9: 1, 17: 2, 25: 3,
+            33: 4, 41: 5, 49: 6, 57: 7
+        }
+        self.gpu_index_to_card = {v: k for k, v in self.gpu_card_to_index.items()}
+        
+        # 使用 card IDs 進行 API 查詢，但輸出使用 GPU indices
+        self.gpu_card_ids = [1, 9, 17, 25, 33, 41, 49, 57]
+        self.gpu_indices = list(range(8))  # 0-7
         
         # 數據點設定：每10分鐘一個點，一天共144個點
         self.points = 144
         
-        print(f"使用固定 GPU ID: {self.gpu_ids}")
+        print(f"GPU 硬體對應: Card {self.gpu_card_ids} -> Index {self.gpu_indices}")
+        print(f"使用 Card IDs 進行 API 查詢，檔案以 GPU Index 命名")
     
     def validate_date(self, date_str):
         """驗證日期格式"""
@@ -98,27 +107,28 @@ class GPUDataCollector:
         print(f"正在處理 {name} ({ip})...")
         print(f"輸出目錄: {ip_outdir}")
         
-        for gpu_id in self.gpu_ids:
-            print(f"  處理 GPU {gpu_id}...")
+        for card_id in self.gpu_card_ids:
+            gpu_index = self.gpu_card_to_index[card_id]
+            print(f"  處理 GPU[{gpu_index}] (Card {card_id})...")
             
-            # 檔案路徑
-            tmp_csv = ip_outdir / f"gpu{gpu_id}_{date_str}.csv.tmp"
-            final_csv = ip_outdir / f"gpu{gpu_id}_{date_str}.csv"
+            # 檔案路徑 (使用 GPU index 命名)
+            tmp_csv = ip_outdir / f"gpu{gpu_index}_{date_str}.csv.tmp"
+            final_csv = ip_outdir / f"gpu{gpu_index}_{date_str}.csv"
             
             # 獲取 GPU 使用率數據
-            gpu_util_chart = f"amdgpu.gpu_utilization_unknown_AMD_GPU_card{gpu_id}"
+            gpu_util_chart = f"amdgpu.gpu_utilization_unknown_AMD_GPU_card{card_id}"
             gpu_util_json = self.fetch_netdata_data(
                 netdata_host, gpu_util_chart, timestamp_start, timestamp_end
             )
             
             # 獲取 VRAM 使用率數據
-            vram_usage_chart = f"amdgpu.gpu_mem_vram_usage_perc_unknown_AMD_GPU_card{gpu_id}"
+            vram_usage_chart = f"amdgpu.gpu_mem_vram_usage_perc_unknown_AMD_GPU_card{card_id}"
             vram_usage_json = self.fetch_netdata_data(
                 netdata_host, vram_usage_chart, timestamp_start, timestamp_end
             )
             
             if not gpu_util_json or not vram_usage_json:
-                print(f"    警告：GPU {gpu_id} 數據獲取失敗，跳過")
+                print(f"    警告：GPU[{gpu_index}] (Card {card_id}) 數據獲取失敗，跳過")
                 continue
             
             # 處理數據並寫入 CSV
@@ -181,13 +191,13 @@ class GPUDataCollector:
             # 創建平均值 CSV
             avg_csv = colab_outdir / f"average_{date_str}.csv"
             with open(avg_csv, 'w', encoding='utf-8') as f:
-                f.write("GPU卡號,平均GPU使用率(%),平均VRAM使用率(%)\n")
+                f.write("GPU編號,平均GPU使用率(%),平均VRAM使用率(%)\n")
                 
                 gpu_averages = []
                 vram_averages = []
                 
-                for gpu_id in self.gpu_ids:
-                    csv_file = colab_outdir / f"gpu{gpu_id}_{date_str}.csv"
+                for gpu_index in self.gpu_indices:
+                    csv_file = colab_outdir / f"gpu{gpu_index}_{date_str}.csv"
                     
                     if csv_file.exists():
                         try:
@@ -202,17 +212,18 @@ class GPUDataCollector:
                                 gpu_averages.append(avg_gpu)
                                 vram_averages.append(avg_vram)
                                 
-                                print(f"GPU {gpu_id}: 平均使用率 = {avg_gpu:.2f}%, 平均VRAM使用率 = {avg_vram:.2f}%")
-                                f.write(f"gpu{gpu_id},{avg_gpu:.2f},{avg_vram:.2f}\n")
+                                card_id = self.gpu_index_to_card[gpu_index]
+                                print(f"GPU[{gpu_index}] (Card {card_id}): 平均使用率 = {avg_gpu:.2f}%, 平均VRAM使用率 = {avg_vram:.2f}%")
+                                f.write(f"GPU[{gpu_index}],{avg_gpu:.2f},{avg_vram:.2f}\n")
                             else:
-                                print(f"警告：GPU {gpu_id} 的數據檔案為空")
-                                f.write(f"gpu{gpu_id},N/A,N/A\n")
+                                print(f"警告：GPU[{gpu_index}] 的數據檔案為空")
+                                f.write(f"GPU[{gpu_index}],N/A,N/A\n")
                         except Exception as e:
                             print(f"錯誤：讀取 {csv_file} 時發生錯誤: {e}")
-                            f.write(f"gpu{gpu_id},N/A,N/A\n")
+                            f.write(f"GPU[{gpu_index}],N/A,N/A\n")
                     else:
                         print(f"警告：找不到 {csv_file} 檔案")
-                        f.write(f"gpu{gpu_id},N/A,N/A\n")
+                        f.write(f"GPU[{gpu_index}],N/A,N/A\n")
                 
                 # 計算整體平均值
                 if gpu_averages:
@@ -242,20 +253,27 @@ class GPUDataCollector:
             f.write("================================\n")
             f.write("AMD GPU 與 VRAM 每日使用率統計\n")
             f.write(f"日期: {date_str}\n")
+            f.write(f"節點: {name}\n")
             f.write("================================\n\n")
-            f.write(f"偵測到的 GPU 卡: {self.gpu_ids}\n\n")
-            f.write("各 GPU 卡使用率與 VRAM 使用率:\n\n")
+            
+            # 顯示 GPU 硬體對應表
+            f.write("GPU 硬體對應表:\n")
+            for gpu_index in self.gpu_indices:
+                card_id = self.gpu_index_to_card[gpu_index]
+                f.write(f"GPU[{gpu_index}] -> Card {card_id}\n")
+            
+            f.write("\n各 GPU 使用率與 VRAM 使用率:\n")
             
             # 讀取平均值數據並寫入報告
             if avg_csv.exists():
                 try:
                     df = pd.read_csv(avg_csv)
                     for _, row in df.iterrows():
-                        if row['GPU卡號'] != '全部平均':
-                            gpu_id = row['GPU卡號']
+                        if row['GPU編號'] != '全部平均':
+                            gpu_id = row['GPU編號']
                             gpu_usage = row['平均GPU使用率(%)']
                             vram_usage = row['平均VRAM使用率(%)']
-                            f.write(f"GPU {gpu_id}: GPU使用率 = {gpu_usage}%, VRAM使用率 = {vram_usage}%\n")
+                            f.write(f"{gpu_id}: GPU使用率 = {gpu_usage}%, VRAM使用率 = {vram_usage}%\n")
                 except Exception as e:
                     f.write(f"錯誤：無法讀取平均值數據: {e}\n")
             

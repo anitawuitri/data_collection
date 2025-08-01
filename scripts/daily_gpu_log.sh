@@ -31,9 +31,41 @@ OUTDIR="${outdir_prefix}${DATE}"
 #NETDATA_HOST="http://localhost:19999"
 
 
-# 固定 GPU ID 列表
-GPU_IDS=(1 9 17 25 33 41 49 57)
-echo "使用固定 GPU ID: ${GPU_IDS[@]}"
+# GPU 硬體對照表 (DRM card ID -> GPU index)
+# 基於 gpu_hardware_mapping.txt 的對照關係
+declare -A GPU_CARD_TO_INDEX=(
+    ["1"]="0"   # card1  -> GPU[0]
+    ["9"]="1"   # card9  -> GPU[1] 
+    ["17"]="2"  # card17 -> GPU[2]
+    ["25"]="3"  # card25 -> GPU[3]
+    ["33"]="4"  # card33 -> GPU[4]
+    ["41"]="5"  # card41 -> GPU[5]
+    ["49"]="6"  # card49 -> GPU[6]
+    ["57"]="7"  # card57 -> GPU[7]
+)
+
+# 建立反向對照表 (GPU index -> DRM card ID)
+declare -A GPU_INDEX_TO_CARD=(
+    ["0"]="1"   # GPU[0] -> card1
+    ["1"]="9"   # GPU[1] -> card9
+    ["2"]="17"  # GPU[2] -> card17
+    ["3"]="25"  # GPU[3] -> card25
+    ["4"]="33"  # GPU[4] -> card33
+    ["5"]="41"  # GPU[5] -> card41
+    ["6"]="49"  # GPU[6] -> card49
+    ["7"]="57"  # GPU[7] -> card57
+)
+
+# 固定 GPU Card ID 列表 (DRM card 編號)
+GPU_CARD_IDS=(1 9 17 25 33 41 49 57)
+echo "使用固定 GPU Card ID: ${GPU_CARD_IDS[@]}"
+
+# 顯示 GPU 硬體對照表
+echo "GPU 硬體對照表:"
+for card_id in "${GPU_CARD_IDS[@]}"; do
+    gpu_index="${GPU_CARD_TO_INDEX[$card_id]}"
+    echo "  card${card_id} -> GPU[${gpu_index}]"
+done
 
 # 為指定日期計算時間戳記
 echo "$DATE 的時間戳記計算..."
@@ -62,19 +94,19 @@ for IP in "${IP_LIST[@]}"; do
 
     echo "正在處理 $NAME ($IP)..."
     echo "輸出目錄: $IP_OUTDIR"
-    # for GPU_ID in "${GPU_IDS[@]}"; do
-    #     # 擷取 SVG 圖表，確保覆蓋整天資料
-    #     curl -s "$NETDATA_HOST/api/v1/badge.svg?chart=amdgpu.gpu_utilization_unknown_AMD_GPU_card${GPU_ID}&after=$TIMESTAMP_START&before=$TIMESTAMP_END&points=$POINTS&format=svg" \
-    #         -o "$IP_OUTDIR/gpu${GPU_ID}_$DATE.svg"
-    # done
-    for GPU_ID in "${GPU_IDS[@]}"; do
-        TMP_CSV="$IP_OUTDIR/gpu${GPU_ID}_$DATE.csv.tmp"
-        FINAL_CSV="$IP_OUTDIR/gpu${GPU_ID}_$DATE.csv"
+    
+    for CARD_ID in "${GPU_CARD_IDS[@]}"; do
+        GPU_INDEX="${GPU_CARD_TO_INDEX[$CARD_ID]}"
+        TMP_CSV="$IP_OUTDIR/gpu${GPU_INDEX}_$DATE.csv.tmp"
+        FINAL_CSV="$IP_OUTDIR/gpu${GPU_INDEX}_$DATE.csv"
+        
+        echo "  處理 card${CARD_ID} (GPU[${GPU_INDEX}])..."
+        
         # 擷取一天資料，每10分鐘一個點 (共144點)
         # 第一步：擷取 GPU 使用率數據
-        GPU_UTIL_JSON=$(curl -s "$NETDATA_HOST/api/v1/data?chart=amdgpu.gpu_utilization_unknown_AMD_GPU_card${GPU_ID}&after=$TIMESTAMP_START&before=$TIMESTAMP_END&points=$POINTS&group=average&format=json")
+        GPU_UTIL_JSON=$(curl -s "$NETDATA_HOST/api/v1/data?chart=amdgpu.gpu_utilization_unknown_AMD_GPU_card${CARD_ID}&after=$TIMESTAMP_START&before=$TIMESTAMP_END&points=$POINTS&group=average&format=json")
         # 第二步：擷取 VRAM 使用率數據
-        VRAM_USAGE_JSON=$(curl -s "$NETDATA_HOST/api/v1/data?chart=amdgpu.gpu_mem_vram_usage_perc_unknown_AMD_GPU_card${GPU_ID}&after=$TIMESTAMP_START&before=$TIMESTAMP_END&points=$POINTS&group=average&format=json")
+        VRAM_USAGE_JSON=$(curl -s "$NETDATA_HOST/api/v1/data?chart=amdgpu.gpu_mem_vram_usage_perc_unknown_AMD_GPU_card${CARD_ID}&after=$TIMESTAMP_START&before=$TIMESTAMP_END&points=$POINTS&group=average&format=json")
         
         # 創建包含時間戳、日期時間、GPU使用率和VRAM使用率的CSV
         echo "時間戳,日期時間,GPU使用率(%),VRAM使用率(%)" > "$TMP_CSV"
@@ -111,9 +143,11 @@ done
 for NAME in colab-gpu1 colab-gpu2 colab-gpu3 colab-gpu4; do
     COLAB_OUTDIR="${outdir_prefix}${NAME}/$DATE"
     echo "計算 $DATE $NAME 的 GPU 平均使用率..."
-    echo "GPU卡號,平均GPU使用率(%),平均VRAM使用率(%)" > "$COLAB_OUTDIR/average_$DATE.csv"
-    for GPU_ID in "${GPU_IDS[@]}"; do
-        CSV_FILE="$COLAB_OUTDIR/gpu${GPU_ID}_$DATE.csv"
+    echo "GPU編號,平均GPU使用率(%),平均VRAM使用率(%)" > "$COLAB_OUTDIR/average_$DATE.csv"
+    
+    # 使用 GPU index (0-7) 而不是 card ID
+    for GPU_INDEX in 0 1 2 3 4 5 6 7; do
+        CSV_FILE="$COLAB_OUTDIR/gpu${GPU_INDEX}_$DATE.csv"
         if [ -f "$CSV_FILE" ]; then
             # 計算 GPU 使用率平均值 (第三欄)
             AVG_USAGE=$(awk -F, 'NR>1 {sum+=$3; count++} END {if (count > 0) print sum/count; else print "N/A"}' "$CSV_FILE")
@@ -132,11 +166,11 @@ for NAME in colab-gpu1 colab-gpu2 colab-gpu3 colab-gpu4; do
                 FORMATTED_AVG_VRAM="N/A"
             fi
             
-            echo "GPU $GPU_ID: 平均使用率 = $FORMATTED_AVG_USAGE%, 平均VRAM使用率 = $FORMATTED_AVG_VRAM%"
-            echo "gpu${GPU_ID},$FORMATTED_AVG_USAGE,$FORMATTED_AVG_VRAM" >> "$COLAB_OUTDIR/average_$DATE.csv"
+            echo "GPU[${GPU_INDEX}]: 平均使用率 = $FORMATTED_AVG_USAGE%, 平均VRAM使用率 = $FORMATTED_AVG_VRAM%"
+            echo "GPU[${GPU_INDEX}],$FORMATTED_AVG_USAGE,$FORMATTED_AVG_VRAM" >> "$COLAB_OUTDIR/average_$DATE.csv"
         else
             echo "警告: 找不到 $CSV_FILE 檔案"
-            echo "gpu${GPU_ID},N/A,N/A" >> "$COLAB_OUTDIR/average_$DATE.csv"
+            echo "GPU[${GPU_INDEX}],N/A,N/A" >> "$COLAB_OUTDIR/average_$DATE.csv"
         fi
     done
     # 計算所有 GPU 的整體平均使用率
@@ -167,14 +201,13 @@ for NAME in colab-gpu1 colab-gpu2 colab-gpu3 colab-gpu4; do
 ================================
 AMD GPU 與 VRAM 每日使用率統計
 日期: $DATE
+節點: $NAME
 ================================
 
-偵測到的 GPU 卡: ${GPU_IDS[@]}
+GPU 硬體對應表:
+$(for i in 0 1 2 3 4 5 6 7; do echo "GPU[$i] -> Card ${GPU_INDEX_TO_CARD[$i]}"; done)
 
-各 GPU 卡使用率與 VRAM 使用率:
-
-
-
+各 GPU 使用率與 VRAM 使用率:
 $(awk -F, 'NR>1 {printf "GPU %s: GPU使用率 = %s%%, VRAM使用率 = %s%%\n", $1, $2, $3}' "$COLAB_OUTDIR/average_$DATE.csv")
 
 整體平均 GPU 使用率: $FORMATTED_OVERALL_AVG%
