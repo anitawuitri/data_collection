@@ -19,6 +19,7 @@ import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 import time
+from urllib.parse import urlencode
 
 
 class GPUDataCollector:
@@ -48,6 +49,15 @@ class GPUDataCollector:
         
         # 數據點設定：每10分鐘一個點，一天共144個點
         self.points = 144
+        
+        # 管理 API 配置
+        self.management_api = {
+            "domain": "192.168.10.100",
+            "access_token": "eyJhbGciOiJIUzI1NiIsImFwaV9hZGRyZXNzIjoiaHR0cDovLzE5Mi4xNjguMTAuMTAwOjgwIiwidHlwIjoiSldUIn0.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0Nzc5NzI3NywianRpIjoiNjUyZDk1ZjEtODU0MC00OTYyLTg4MDItZmJlZGJiMTQyOWFhIiwidHlwZSI6ImFjY2VzcyIsImlkZW50aXR5IjoiYWRtaW4iLCJuYmYiOjE3NDc3OTcyNzcsInJvbGUiOlsiQWRtaW4iXX0.mDdQeARC1MhzAaVik67cKRX4bq8M5C36reUDNWroLd8"
+        }
+        
+        # GPU 使用者任務資訊
+        self.gpu_task_info = {}
         
         print(f"GPU 硬體對應: Card {self.gpu_card_ids} -> Index {self.gpu_indices}")
         print(f"使用 Card IDs 進行 API 查詢，檔案以 GPU Index 命名")
@@ -96,6 +106,104 @@ class GPUDataCollector:
         except requests.exceptions.RequestException as e:
             print(f"錯誤：無法從 {host} 獲取數據 {chart}: {e}")
             return None
+    
+    def fetch_gpu_task_info(self, date_str):
+        """從管理 API 獲取 GPU 使用者任務資訊"""
+        print(f"正在獲取 {date_str} 的 GPU 使用者任務資訊...")
+        
+        # 計算時間範圍
+        time_start = f"{date_str} 00:00:00"
+        time_end = f"{date_str} 23:59:59"
+        
+        # 構建 API URL
+        base_url = f"http://{self.management_api['domain']}/api/v2/consumption/task"
+        
+        # 準備請求參數
+        params = {
+            'start_t': time_start,
+            'end_t': time_end
+        }
+        
+        headers = {
+            'accept': 'application/json',
+            'Authorization': f"Bearer {self.management_api['access_token']}"
+        }
+        
+        try:
+            # 發送請求
+            response = requests.get(base_url, params=params, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            task_data = response.json()
+            
+            # 解析任務資訊，建立 GPU UUID 到使用者的對應
+            gpu_usage_map = {}
+            
+            for task_id, task_info in task_data.items():
+                username = task_info.get('username', 'unknown')
+                hostname = task_info.get('hostname', 'unknown')
+                gpus = task_info.get('gpus', [])
+                task_details = task_info.get('task', {})
+                
+                for gpu in gpus:
+                    gpu_uuid = gpu.get('uuid', '')
+                    gpu_id = gpu.get('id', '')
+                    gpu_name = gpu.get('name', 'Unknown GPU')
+                    gpu_memory = gpu.get('memory', 0)
+                    
+                    # 儲存 GPU 使用者資訊
+                    gpu_usage_map[gpu_uuid] = {
+                        'username': username,
+                        'hostname': hostname,
+                        'gpu_id': gpu_id,
+                        'gpu_name': gpu_name,
+                        'gpu_memory': gpu_memory,
+                        'task_id': task_id,
+                        'task_type': task_details.get('_type', 'unknown'),
+                        'project_uuid': task_details.get('project_uuid', ''),
+                        'image': task_details.get('image', ''),
+                        'create_time': task_details.get('create_time', ''),
+                        'start': task_info.get('start', ''),
+                        'end': task_info.get('end', ''),
+                        'total_seconds': task_info.get('total_seconds', 0)
+                    }
+            
+            self.gpu_task_info = gpu_usage_map
+            print(f"成功獲取 {len(gpu_usage_map)} 個 GPU 的使用者任務資訊")
+            
+            # 顯示摘要資訊
+            if gpu_usage_map:
+                print("GPU 使用者任務摘要:")
+                for gpu_uuid, info in gpu_usage_map.items():
+                    print(f"  GPU {info['gpu_id']} ({info['hostname']}): {info['username']} - {info['gpu_name']}")
+            
+            return gpu_usage_map
+            
+        except requests.exceptions.RequestException as e:
+            print(f"錯誤：無法從管理 API 獲取任務資訊: {e}")
+            return {}
+        except json.JSONDecodeError as e:
+            print(f"錯誤：解析 API 回應時發生錯誤: {e}")
+            return {}
+        except Exception as e:
+            print(f"錯誤：處理任務資訊時發生錯誤: {e}")
+            return {}
+    
+    def get_gpu_user_mapping(self, hostname):
+        """為指定主機建立 GPU ID 到使用者的對應關係"""
+        gpu_user_map = {}
+        
+        if not self.gpu_task_info:
+            return gpu_user_map
+        
+        # 遍歷所有任務資訊，找出指定主機的 GPU 使用者對應
+        for gpu_uuid, task_info in self.gpu_task_info.items():
+            if task_info['hostname'] == hostname:
+                gpu_id = task_info['gpu_id']
+                username = task_info['username']
+                gpu_user_map[gpu_id] = username
+        
+        return gpu_user_map
     
     def process_gpu_data(self, ip, name, date_str, timestamp_start, timestamp_end):
         """處理單一節點的 GPU 數據"""
@@ -188,16 +296,27 @@ class GPUDataCollector:
             
             print(f"計算 {date_str} {name} 的 GPU 平均使用率...")
             
-            # 創建平均值 CSV
+            # 獲取該節點的 GPU 使用者對應關係
+            gpu_user_map = self.get_gpu_user_mapping(name)
+            
+            # 創建平均值 CSV (包含使用者欄位)
             avg_csv = colab_outdir / f"average_{date_str}.csv"
             with open(avg_csv, 'w', encoding='utf-8') as f:
-                f.write("GPU編號,平均GPU使用率(%),平均VRAM使用率(%)\n")
+                f.write("GPU編號,平均GPU使用率(%),平均VRAM使用率(%),使用者\n")
                 
                 gpu_averages = []
                 vram_averages = []
                 
                 for gpu_index in self.gpu_indices:
                     csv_file = colab_outdir / f"gpu{gpu_index}_{date_str}.csv"
+                    card_id = self.gpu_index_to_card[gpu_index]
+                    
+                    # 查找使用者 (透過 card ID 或 GPU ID 對應)
+                    username = "未使用"
+                    for gpu_id, user in gpu_user_map.items():
+                        if gpu_id == card_id:  # 使用 card ID 對應
+                            username = user
+                            break
                     
                     if csv_file.exists():
                         try:
@@ -212,18 +331,17 @@ class GPUDataCollector:
                                 gpu_averages.append(avg_gpu)
                                 vram_averages.append(avg_vram)
                                 
-                                card_id = self.gpu_index_to_card[gpu_index]
-                                print(f"GPU[{gpu_index}] (Card {card_id}): 平均使用率 = {avg_gpu:.2f}%, 平均VRAM使用率 = {avg_vram:.2f}%")
-                                f.write(f"GPU[{gpu_index}],{avg_gpu:.2f},{avg_vram:.2f}\n")
+                                print(f"GPU[{gpu_index}] (Card {card_id}, {username}): 平均使用率 = {avg_gpu:.2f}%, 平均VRAM使用率 = {avg_vram:.2f}%")
+                                f.write(f"GPU[{gpu_index}],{avg_gpu:.2f},{avg_vram:.2f},{username}\n")
                             else:
                                 print(f"警告：GPU[{gpu_index}] 的數據檔案為空")
-                                f.write(f"GPU[{gpu_index}],N/A,N/A\n")
+                                f.write(f"GPU[{gpu_index}],N/A,N/A,{username}\n")
                         except Exception as e:
                             print(f"錯誤：讀取 {csv_file} 時發生錯誤: {e}")
-                            f.write(f"GPU[{gpu_index}],N/A,N/A\n")
+                            f.write(f"GPU[{gpu_index}],N/A,N/A,{username}\n")
                     else:
                         print(f"警告：找不到 {csv_file} 檔案")
-                        f.write(f"GPU[{gpu_index}],N/A,N/A\n")
+                        f.write(f"GPU[{gpu_index}],N/A,N/A,{username}\n")
                 
                 # 計算整體平均值
                 if gpu_averages:
@@ -238,7 +356,7 @@ class GPUDataCollector:
                 print(f"{name} 所有 GPU 的整體平均 VRAM 使用率: {overall_avg_vram:.2f}%")
                 print("=" * 43)
                 
-                f.write(f"全部平均,{overall_avg_gpu:.2f},{overall_avg_vram:.2f}\n")
+                f.write(f"全部平均,{overall_avg_gpu:.2f},{overall_avg_vram:.2f},所有使用者\n")
                 print(f"結果已保存至 {avg_csv}")
                 
                 # 生成摘要報告
@@ -262,9 +380,40 @@ class GPUDataCollector:
                 card_id = self.gpu_index_to_card[gpu_index]
                 f.write(f"GPU[{gpu_index}] -> Card {card_id}\n")
             
+            # 顯示 GPU 使用者任務資訊
+            if self.gpu_task_info:
+                f.write("\nGPU 使用者任務資訊:\n")
+                f.write("-" * 50 + "\n")
+                
+                # 按主機名稱分組顯示
+                hostname_tasks = {}
+                for gpu_uuid, task_info in self.gpu_task_info.items():
+                    hostname = task_info['hostname']
+                    if hostname not in hostname_tasks:
+                        hostname_tasks[hostname] = []
+                    hostname_tasks[hostname].append((gpu_uuid, task_info))
+                
+                for hostname, tasks in hostname_tasks.items():
+                    if hostname == name:  # 只顯示當前節點的任務
+                        f.write(f"\n{hostname} GPU 任務資訊:\n")
+                        for gpu_uuid, task_info in tasks:
+                            f.write(f"  GPU {task_info['gpu_id']}: {task_info['username']}\n")
+                            f.write(f"    - GPU 型號: {task_info['gpu_name']}\n")
+                            f.write(f"    - GPU 記憶體: {task_info['gpu_memory']} MB\n")
+                            f.write(f"    - 任務類型: {task_info['task_type']}\n")
+                            f.write(f"    - 專案 UUID: {task_info['project_uuid']}\n")
+                            f.write(f"    - 映像檔: {task_info['image']}\n")
+                            f.write(f"    - 開始時間: {task_info['start']}\n")
+                            if task_info['end']:
+                                f.write(f"    - 結束時間: {task_info['end']}\n")
+                            else:
+                                f.write(f"    - 狀態: 執行中\n")
+                            f.write(f"    - 使用時長: {task_info['total_seconds']:.1f} 秒\n")
+                            f.write(f"    - GPU UUID: {gpu_uuid}\n\n")
+            
             f.write("\n各 GPU 使用率與 VRAM 使用率:\n")
             
-            # 讀取平均值數據並寫入報告
+            # 讀取平均值數據並寫入報告 (新格式包含使用者欄位)
             if avg_csv.exists():
                 try:
                     df = pd.read_csv(avg_csv)
@@ -273,7 +422,13 @@ class GPUDataCollector:
                             gpu_id = row['GPU編號']
                             gpu_usage = row['平均GPU使用率(%)']
                             vram_usage = row['平均VRAM使用率(%)']
-                            f.write(f"{gpu_id}: GPU使用率 = {gpu_usage}%, VRAM使用率 = {vram_usage}%\n")
+                            
+                            # 讀取使用者資訊欄位 (如果存在)
+                            username = ""
+                            if '使用者' in row and pd.notna(row['使用者']):
+                                username = f" (使用者: {row['使用者']})"
+                            
+                            f.write(f"{gpu_id}: GPU使用率 = {gpu_usage}%, VRAM使用率 = {vram_usage}%{username}\n")
                 except Exception as e:
                     f.write(f"錯誤：無法讀取平均值數據: {e}\n")
             
@@ -282,6 +437,46 @@ class GPUDataCollector:
             f.write("================================\n")
         
         print(f"摘要報告已保存至 {summary_file}")
+        
+    def generate_gpu_usage_report(self, date_str):
+        """生成包含使用者資訊的 GPU 使用報告"""
+        if not self.gpu_task_info:
+            print("沒有 GPU 使用者任務資訊可供顯示")
+            return
+        
+        print(f"\n=== {date_str} GPU 使用者任務報告 ===")
+        print("=" * 60)
+        
+        # 按主機名稱分組
+        hostname_tasks = {}
+        for gpu_uuid, task_info in self.gpu_task_info.items():
+            hostname = task_info['hostname']
+            if hostname not in hostname_tasks:
+                hostname_tasks[hostname] = []
+            hostname_tasks[hostname].append((gpu_uuid, task_info))
+        
+        for hostname, tasks in hostname_tasks.items():
+            print(f"\n{hostname}:")
+            print("-" * 40)
+            
+            for gpu_uuid, task_info in tasks:
+                print(f"GPU {task_info['gpu_id']}:")
+                print(f"  使用者: {task_info['username']}")
+                print(f"  GPU 型號: {task_info['gpu_name']}")
+                print(f"  GPU 記憶體: {task_info['gpu_memory']} MB")
+                print(f"  任務類型: {task_info['task_type']}")
+                print(f"  映像檔: {task_info['image']}")
+                print(f"  開始時間: {task_info['start']}")
+                if task_info['end']:
+                    print(f"  結束時間: {task_info['end']}")
+                    print(f"  狀態: 已完成")
+                else:
+                    print(f"  狀態: 執行中")
+                print(f"  使用時長: {task_info['total_seconds']:.1f} 秒")
+                print(f"  GPU UUID: {gpu_uuid}")
+                print()
+        
+        print("=" * 60)
     
     def collect_data(self, date_str=None):
         """主要數據收集函數"""
@@ -292,6 +487,13 @@ class GPUDataCollector:
             raise ValueError("錯誤：日期格式無效，請使用 YYYY-MM-DD 格式")
         
         print(f"使用日期: {date_str}")
+        
+        # 獲取 GPU 使用者任務資訊
+        try:
+            self.fetch_gpu_task_info(date_str)
+        except Exception as e:
+            print(f"警告：無法獲取 GPU 使用者任務資訊: {e}")
+            print("將繼續進行 GPU 使用率數據收集...")
         
         # 計算時間戳
         timestamp_start, timestamp_end = self.calculate_timestamps(date_str)
@@ -320,6 +522,7 @@ def main():
 範例用法:
   %(prog)s                    # 收集今天的數據
   %(prog)s 2025-08-01         # 收集指定日期的數據
+  %(prog)s --user-report 2025-08-01    # 只顯示 GPU 使用者報告
   %(prog)s --help             # 顯示此說明
         """
     )
@@ -336,16 +539,46 @@ def main():
         help='數據輸出目錄 (預設: ./data)'
     )
     
+    parser.add_argument(
+        '--user-report',
+        action='store_true',
+        help='只顯示 GPU 使用者任務報告，不收集使用率數據'
+    )
+    
+    parser.add_argument(
+        '--skip-task-info',
+        action='store_true',
+        help='跳過 GPU 使用者任務資訊的獲取'
+    )
+    
     args = parser.parse_args()
     
     try:
         # 創建數據收集器
         collector = GPUDataCollector(data_dir=args.data_dir)
         
-        # 收集數據
-        collector.collect_data(args.date)
+        # 設定日期
+        date_str = args.date if args.date else datetime.now().strftime('%Y-%m-%d')
         
-        print("\n數據收集完成！")
+        if args.user_report:
+            # 只顯示使用者報告
+            print(f"正在獲取 {date_str} 的 GPU 使用者任務報告...")
+            collector.fetch_gpu_task_info(date_str)
+            collector.generate_gpu_usage_report(date_str)
+        else:
+            # 正常數據收集流程
+            if args.skip_task_info:
+                # 跳過任務資訊獲取
+                print("跳過 GPU 使用者任務資訊獲取")
+                collector.gpu_task_info = {}
+            
+            collector.collect_data(date_str)
+            
+            # 如果有獲取到任務資訊，也顯示使用者報告
+            if collector.gpu_task_info:
+                collector.generate_gpu_usage_report(date_str)
+        
+        print("\n處理完成！")
         
     except KeyboardInterrupt:
         print("\n\n使用者中斷操作")
