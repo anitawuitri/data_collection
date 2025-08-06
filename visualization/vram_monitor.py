@@ -67,6 +67,74 @@ class VRAMMonitor:
         # 創建輸出目錄
         os.makedirs(self.plots_dir, exist_ok=True)
         
+    def load_vram_data_with_users(self, csv_file):
+        """
+        載入包含使用者資訊的 VRAM 資料
+        
+        Args:
+            csv_file (str): CSV 檔案路徑
+            
+        Returns:
+            pd.DataFrame: 包含 VRAM 使用率和使用者資訊的資料
+        """
+        try:
+            df = pd.read_csv(csv_file, encoding='utf-8')
+            
+            # 處理新的 CSV 格式（包含使用者資訊）
+            if 'GPU編號' in df.columns and '平均VRAM使用率(%)' in df.columns:
+                df = df.rename(columns={
+                    'GPU編號': 'gpu',
+                    '平均GPU使用率(%)': 'gpu_usage',
+                    '平均VRAM使用率(%)': 'vram_usage',
+                    '使用者': 'user'
+                })
+            
+            # 過濾掉 "全部平均" 行
+            df = df[~df['gpu'].str.contains('全部平均', na=False)]
+            
+            # 提取 GPU 編號
+            df['gpu_id'] = df['gpu'].str.extract(r'(\d+)').astype(int)
+            df['vram_usage'] = pd.to_numeric(df['vram_usage'], errors='coerce')
+            
+            # 確保有使用者資訊欄位
+            if 'user' not in df.columns:
+                df['user'] = '未知'
+                
+            return df
+            
+        except Exception as e:
+            print(f"載入檔案 {csv_file} 時發生錯誤: {e}")
+            return None
+    
+    def get_vram_user_info_for_node(self, node, date, data_dir=None):
+        """
+        獲取特定節點在特定日期的 VRAM 使用者資訊
+        
+        Args:
+            node (str): 節點名稱
+            date (str): 日期 (YYYY-MM-DD)
+            data_dir (str): 資料目錄
+            
+        Returns:
+            dict: GPU編號對應使用者名稱的字典
+        """
+        if data_dir is None:
+            data_dir = self.data_dir
+            
+        csv_file = os.path.join(data_dir, node, date, f"average_{date}.csv")
+        
+        user_info = {}
+        df = self.load_vram_data_with_users(csv_file)
+        
+        if df is not None:
+            for _, row in df.iterrows():
+                gpu_id = row['gpu_id']
+                user = row['user']
+                if pd.notna(user) and user != '未使用':
+                    user_info[f"GPU[{gpu_id}]"] = user
+                    
+        return user_info
+        
     def collect_vram_data(self, node, gpu_id, date_str=None):
         """
         從現有 CSV 檔案收集指定節點和 GPU 的 VRAM 使用量數據
@@ -379,6 +447,211 @@ class VRAMMonitor:
         plt.close()
         
         print(f"VRAM 熱力圖已保存至: {save_path}")
+        
+        return save_path
+    
+    def plot_vram_user_activity_summary(self, start_date, end_date, save_plot=True):
+        """
+        繪製 VRAM 使用者活動摘要圖表
+        
+        Args:
+            start_date (str): 開始日期 (YYYY-MM-DD)
+            end_date (str): 結束日期 (YYYY-MM-DD)
+            save_plot (bool): 是否保存圖表
+            
+        Returns:
+            str: 保存的圖片路徑
+        """
+        # 收集所有節點的使用者 VRAM 資訊
+        all_user_data = []
+        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+        
+        for node in self.nodes:
+            for date in dates:
+                date_str = date.strftime('%Y-%m-%d')
+                user_info = self.get_vram_user_info_for_node(node, date_str)
+                
+                csv_file = os.path.join(self.data_dir, node, date_str, f"average_{date_str}.csv")
+                df = self.load_vram_data_with_users(csv_file)
+                
+                if df is not None:
+                    for _, row in df.iterrows():
+                        if pd.notna(row['user']) and row['user'] != '未使用':
+                            all_user_data.append({
+                                'node': node,
+                                'gpu': f"GPU[{row['gpu_id']}]",
+                                'date': date_str,
+                                'user': row['user'],
+                                'vram_usage': row['vram_usage']
+                            })
+        
+        if not all_user_data:
+            print("未找到使用者 VRAM 資料")
+            return None
+        
+        df_users = pd.DataFrame(all_user_data)
+        
+        # 統計每個使用者的 VRAM 使用情況
+        user_stats = df_users.groupby('user').agg({
+            'vram_usage': ['mean', 'max', 'count'],
+            'node': lambda x: len(set(x)),  # 使用的節點數
+            'gpu': lambda x: len(set(x))    # 使用的 GPU 數
+        }).round(2)
+        
+        user_stats.columns = ['平均VRAM使用率', '最大VRAM使用率', '資料點數', '使用節點數', '使用GPU數']
+        user_stats = user_stats.sort_values('平均VRAM使用率', ascending=False)
+        
+        # 創建圖表
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+        
+        # 1. 使用者平均 VRAM 使用率長條圖
+        users = user_stats.index
+        colors = plt.cm.Set3(np.linspace(0, 1, len(users)))
+        
+        bars = ax1.bar(users, user_stats['平均VRAM使用率'], color=colors)
+        ax1.set_title('使用者平均 VRAM 使用率', fontsize=14, fontweight='bold')
+        ax1.set_ylabel('VRAM 使用率 (%)', fontsize=12)
+        ax1.set_xlabel('使用者', fontsize=12)
+        plt.setp(ax1.get_xticklabels(), rotation=45)
+        
+        # 添加數值標籤
+        for bar, value in zip(bars, user_stats['平均VRAM使用率']):
+            ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                    f'{value:.2f}%', ha='center', va='bottom', fontsize=10)
+        
+        # 2. 使用者最大 VRAM 使用率長條圖
+        bars = ax2.bar(users, user_stats['最大VRAM使用率'], color=colors)
+        ax2.set_title('使用者最大 VRAM 使用率', fontsize=14, fontweight='bold')
+        ax2.set_ylabel('VRAM 使用率 (%)', fontsize=12)
+        ax2.set_xlabel('使用者', fontsize=12)
+        plt.setp(ax2.get_xticklabels(), rotation=45)
+        
+        # 添加數值標籤
+        for bar, value in zip(bars, user_stats['最大VRAM使用率']):
+            ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                    f'{value:.2f}%', ha='center', va='bottom', fontsize=10)
+        
+        # 3. 使用者 GPU 數量圓餅圖
+        ax3.pie(user_stats['使用GPU數'], labels=users, autopct='%1.0f個',
+               colors=colors, startangle=90)
+        ax3.set_title('使用者使用的 GPU 數量分佈', fontsize=14, fontweight='bold')
+        
+        # 4. 使用者節點分佈圓餅圖
+        ax4.pie(user_stats['使用節點數'], labels=users, autopct='%1.0f個',
+               colors=colors, startangle=90)
+        ax4.set_title('使用者使用的節點數量分佈', fontsize=14, fontweight='bold')
+        
+        plt.tight_layout()
+        
+        # 總標題
+        fig.suptitle(f'VRAM 使用者活動摘要 ({start_date} 至 {end_date})', 
+                    fontsize=16, fontweight='bold', y=0.98)
+        
+        if save_plot:
+            save_path = os.path.join(self.plots_dir, f'vram_user_activity_summary_{start_date}_to_{end_date}.png')
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"VRAM 使用者活動摘要圖已保存至: {save_path}")
+            
+        plt.show()
+        plt.close()
+        
+        return save_path if save_plot else None
+    
+    def plot_vram_nodes_comparison_with_users(self, start_date, end_date, gpu_id=None, show_users=True):
+        """
+        繪製各節點 VRAM 使用量對比圖（包含使用者資訊）
+        
+        Args:
+            start_date (str): 開始日期
+            end_date (str): 結束日期
+            gpu_id (int): 特定 GPU ID，None 表示使用所有 GPU 平均
+            show_users (bool): 是否顯示使用者資訊
+            
+        Returns:
+            str: 保存的圖片路徑
+        """
+        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+        all_data = []
+        user_summary = {}
+        
+        for node in self.nodes:
+            node_data = []
+            for date in dates:
+                date_str = date.strftime('%Y-%m-%d')
+                
+                # 獲取使用者資訊
+                if show_users:
+                    user_info = self.get_vram_user_info_for_node(node, date_str)
+                    for gpu, user in user_info.items():
+                        if user not in user_summary:
+                            user_summary[user] = 0
+                        user_summary[user] += 1
+                
+                # 載入 VRAM 資料
+                csv_file = os.path.join(self.data_dir, node, date_str, f"average_{date_str}.csv")
+                df = self.load_vram_data_with_users(csv_file)
+                
+                if df is not None:
+                    if gpu_id is not None:
+                        # 特定 GPU
+                        gpu_data = df[df['gpu_id'] == gpu_id]
+                        if not gpu_data.empty:
+                            node_data.append(gpu_data['vram_usage'].iloc[0])
+                        else:
+                            node_data.append(0)
+                    else:
+                        # 所有 GPU 平均
+                        avg_usage = df['vram_usage'].mean()
+                        node_data.append(avg_usage)
+                else:
+                    node_data.append(0)
+            
+            all_data.append(node_data)
+        
+        # 繪製圖表
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        date_labels = [date.strftime('%m-%d') for date in dates]
+        
+        for i, (node, data) in enumerate(zip(self.nodes, all_data)):
+            color = self.colors[i % len(self.colors)]
+            ax.plot(date_labels, data, 'o-', label=node, color=color, linewidth=2, markersize=6)
+        
+        ax.set_xlabel('日期', fontsize=12)
+        ax.set_ylabel('VRAM 使用率 (%)', fontsize=12)
+        ax.set_ylim(0, max(100, max([max(data) for data in all_data if data]) * 1.1))
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=11)
+        
+        # 設定標題
+        if gpu_id is not None:
+            title = f'GPU {gpu_id} VRAM 使用率跨節點比較\n期間: {start_date} 至 {end_date}'
+        else:
+            title = f'所有 GPU 平均 VRAM 使用率跨節點比較\n期間: {start_date} 至 {end_date}'
+        
+        # 添加使用者資訊到標題
+        if show_users and user_summary:
+            user_summary_str = ', '.join([f"{user}({count})" for user, count in user_summary.items()])
+            title += f'\n使用者: {user_summary_str}'
+        
+        ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
+        
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        
+        if gpu_id is not None:
+            suffix = '_with_users' if show_users else ''
+            save_path = os.path.join(self.plots_dir, f'vram_nodes_comparison_gpu{gpu_id}_{start_date}_to_{end_date}{suffix}.png')
+        else:
+            suffix = '_with_users' if show_users else ''
+            save_path = os.path.join(self.plots_dir, f'vram_nodes_comparison_all_gpus_{start_date}_to_{end_date}{suffix}.png')
+        
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"VRAM 節點對比圖已保存至: {save_path}")
+        
+        plt.show()
+        plt.close()
+        
         return save_path
 
 def collect_all_vram_data(date_str=None):

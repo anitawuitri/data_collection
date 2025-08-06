@@ -129,8 +129,16 @@ class GPUUsageTrendAnalyzer:
         try:
             df = pd.read_csv(file_path, encoding='utf-8')
             
-            # 處理中文列名
-            if 'GPU卡號' in df.columns and '平均使用率(%)' in df.columns:
+            # 處理新的 CSV 格式（包含使用者資訊）
+            if 'GPU編號' in df.columns and '平均GPU使用率(%)' in df.columns:
+                df = df.rename(columns={
+                    'GPU編號': 'gpu', 
+                    '平均GPU使用率(%)': 'usage',
+                    '平均VRAM使用率(%)': 'vram',
+                    '使用者': 'user'
+                })
+            # 處理舊的中文列名
+            elif 'GPU卡號' in df.columns and '平均使用率(%)' in df.columns:
                 df = df.rename(columns={'GPU卡號': 'gpu', '平均使用率(%)': 'usage'})
             elif len(df.columns) >= 2:
                 df.columns = ['gpu', 'usage'] + list(df.columns[2:])
@@ -141,6 +149,10 @@ class GPUUsageTrendAnalyzer:
             # 提取 GPU 編號
             df['gpu_id'] = df['gpu'].str.extract(r'(\d+)').astype(int)
             df['usage'] = pd.to_numeric(df['usage'], errors='coerce')
+            
+            # 確保有使用者資訊欄位
+            if 'user' not in df.columns:
+                df['user'] = '未知'
             df['date'] = date
             df['node'] = node
             
@@ -339,7 +351,7 @@ class GPUUsageTrendAnalyzer:
         plt.show()
         plt.close()
     
-    def plot_heatmap(self, start_date, end_date, save_plot=True):
+    def plot_heatmap(self, start_date, end_date, save_plot=True, show_users=True):
         """
         繪製 GPU 使用率熱力圖
         
@@ -347,9 +359,11 @@ class GPUUsageTrendAnalyzer:
             start_date (str): 開始日期
             end_date (str): 結束日期
             save_plot (bool): 是否保存圖表
+            show_users (bool): 是否顯示使用者資訊
         """
         # 收集所有數據
         all_data = []
+        user_info = {}  # 儲存使用者資訊
         dates = pd.date_range(start=start_date, end=end_date, freq='D')
         
         for node in self.nodes:
@@ -359,12 +373,19 @@ class GPUUsageTrendAnalyzer:
                 
                 if daily_avg is not None:
                     for _, row in daily_avg.iterrows():
+                        gpu_key = f"{node}-GPU{row['gpu_id']}"
+                        
                         all_data.append({
                             'node': node,
-                            'gpu': f'GPU {row["gpu_id"]}',
+                            'gpu': f'GPU{row["gpu_id"]}',
+                            'gpu_key': gpu_key,
                             'date': date_str,
                             'usage': row['usage']
                         })
+                        
+                        # 收集使用者資訊
+                        if show_users and 'user' in row and pd.notna(row['user']):
+                            user_info[gpu_key] = row['user']
         
         if not all_data:
             print("未找到數據進行熱力圖繪製")
@@ -373,12 +394,25 @@ class GPUUsageTrendAnalyzer:
         df = pd.DataFrame(all_data)
         
         # 創建樞紐表：行為節點+GPU，列為日期
-        pivot_table = df.pivot_table(
-            values='usage', 
-            index=['node', 'gpu'], 
-            columns='date', 
-            aggfunc='mean'
-        )
+        if show_users:
+            # 為每個 GPU 添加使用者資訊到標籤
+            df['gpu_label'] = df.apply(lambda x: 
+                f"{x['node']} {x['gpu']} ({user_info.get(x['gpu_key'], '未知')})" 
+                if x['gpu_key'] in user_info else f"{x['node']} {x['gpu']}", axis=1)
+            
+            pivot_table = df.pivot_table(
+                values='usage', 
+                index='gpu_label', 
+                columns='date', 
+                aggfunc='mean'
+            )
+        else:
+            pivot_table = df.pivot_table(
+                values='usage', 
+                index=['node', 'gpu'], 
+                columns='date', 
+                aggfunc='mean'
+            )
         
         # 繪製熱力圖
         fig, ax = plt.subplots(figsize=(max(12, len(dates) * 0.8), max(10, len(pivot_table) * 0.4)))
@@ -390,16 +424,29 @@ class GPUUsageTrendAnalyzer:
                    cbar_kws={'label': 'GPU 使用率 (%)'},
                    ax=ax)
         
-        ax.set_title(f'GPU 使用率熱力圖\n期間: {start_date} 至 {end_date}', 
-                    fontsize=16, fontweight='bold', pad=20)
+        # 創建標題
+        title = f'GPU 使用率熱力圖\n期間: {start_date} 至 {end_date}'
+        if show_users and user_info:
+            # 統計使用者資訊
+            user_counts = {}
+            for user in user_info.values():
+                if user != '未知' and user != '未使用':
+                    user_counts[user] = user_counts.get(user, 0) + 1
+            
+            if user_counts:
+                user_summary = ', '.join([f"{user}({count})" for user, count in user_counts.items()])
+                title += f'\n使用者: {user_summary}'
+        
+        ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
         ax.set_xlabel('日期', fontsize=12)
-        ax.set_ylabel('節點 & GPU', fontsize=12)
+        ax.set_ylabel('節點 & GPU' + (' (使用者)' if show_users else ''), fontsize=12)
         
         plt.xticks(rotation=45)
         plt.tight_layout()
         
         if save_plot:
-            save_path = os.path.join(self.plots_dir, f'heatmap_{start_date}_to_{end_date}.png')
+            suffix = '_with_users' if show_users else ''
+            save_path = os.path.join(self.plots_dir, f'heatmap_{start_date}_to_{end_date}{suffix}.png')
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"熱力圖已保存至: {save_path}")
         
