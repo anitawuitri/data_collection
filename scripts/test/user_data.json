@@ -1,0 +1,517 @@
+{
+    "541": {
+        "uuid": "ud6afb0f",
+        "username": "nycubme",
+        "flavor": {
+            "id": 21,
+            "cpu": 16,
+            "gpu": 2,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 262141
+        },
+        "task": {
+            "id": 221,
+            "uuid": "ud6afb0f",
+            "_type": "LAB",
+            "project_uuid": "pd6ce655",
+            "owner": "nycubme",
+            "image": "myelintek/labu1f682d9:1750235191",
+            "create_time": "Thu, 19 Jun 2025 09:47:22 GMT"
+        },
+        "hostname": "colab-gpu4",
+        "gpus": [
+            {
+                "id": 25,
+                "uuid": "APU-70cb99ce3e214bda",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            },
+            {
+                "id": 26,
+                "uuid": "APU-408c59bf1c17d7d7",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Mon, 14 Jul 2025 14:22:00 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "550": {
+        "uuid": "e60568ac",
+        "username": "itrd",
+        "flavor": {
+            "id": 21,
+            "cpu": 16,
+            "gpu": 2,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 262141
+        },
+        "task": {
+            "id": 147,
+            "uuid": "e60568ac",
+            "_type": "WEBAPP",
+            "project_uuid": "p2d60965",
+            "owner": "itrd",
+            "image": "192.168.10.101:5000/myelintek/ollama:0.6.2-rocm",
+            "create_time": "Tue, 27 May 2025 09:53:35 GMT"
+        },
+        "hostname": "colab-gpu4",
+        "gpus": [
+            {
+                "id": 27,
+                "uuid": "APU-52f67b3700dcc6f3",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            },
+            {
+                "id": 28,
+                "uuid": "APU-fedfa3a312e0f421",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Wed, 16 Jul 2025 08:19:32 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "553": {
+        "uuid": "uae7635c",
+        "username": "admin",
+        "flavor": {
+            "id": 24,
+            "cpu": 16,
+            "gpu": 0,
+            "gpu_type": "Any",
+            "memory": 65536
+        },
+        "task": {
+            "id": 218,
+            "uuid": "uae7635c",
+            "_type": "LAB",
+            "project_uuid": "pa7ab3f9",
+            "owner": "admin",
+            "image": "pa7ab3f9/open-webui:main",
+            "create_time": "Thu, 19 Jun 2025 02:54:09 GMT"
+        },
+        "hostname": "colab-gpu2",
+        "gpus": [],
+        "start": "Thu, 17 Jul 2025 06:06:54 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "554": {
+        "uuid": "ud11a517",
+        "username": "admin",
+        "flavor": {
+            "id": 16,
+            "cpu": 16,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 131072
+        },
+        "task": {
+            "id": 235,
+            "uuid": "ud11a517",
+            "_type": "LAB",
+            "project_uuid": "pa7ab3f9",
+            "owner": "admin",
+            "image": "pa7ab3f9/ollama:0.10.0-rc0-rocm",
+            "create_time": "Thu, 17 Jul 2025 07:26:22 GMT"
+        },
+        "hostname": "colab-gpu1",
+        "gpus": [
+            {
+                "id": 2,
+                "uuid": "APU-8bb3dad0a5e6db1d",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Thu, 17 Jul 2025 07:26:22 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "570": {
+        "uuid": "u76318cd",
+        "username": "admin",
+        "flavor": {
+            "id": 21,
+            "cpu": 16,
+            "gpu": 2,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 262141
+        },
+        "task": {
+            "id": 238,
+            "uuid": "u76318cd",
+            "_type": "LAB",
+            "project_uuid": "pd6ce655",
+            "owner": "nycubme",
+            "image": "myelintek/pytorch:rocm6.3.4_ubuntu24.04_py3.10_pytorch_release_2.4.0",
+            "create_time": "Fri, 18 Jul 2025 07:44:13 GMT"
+        },
+        "hostname": "colab-gpu2",
+        "gpus": [
+            {
+                "id": 17,
+                "uuid": "APU-0afb4a7a9b700b35",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            },
+            {
+                "id": 18,
+                "uuid": "APU-703b58d26c2e65bb",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Thu, 24 Jul 2025 08:35:51 GMT",
+        "end": "Tue, 05 Aug 2025 08:24:07 GMT",
+        "total_seconds": 30247.17972
+    },
+    "573": {
+        "uuid": "uc843681",
+        "username": "nycubme",
+        "flavor": {
+            "id": 21,
+            "cpu": 16,
+            "gpu": 2,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 262141
+        },
+        "task": {
+            "id": 241,
+            "uuid": "uc843681",
+            "_type": "LAB",
+            "project_uuid": "p5b6c17f",
+            "owner": "nycubme",
+            "image": "myelintek/pytorch:rocm6.3.4_ubuntu24.04_py3.10_pytorch_release_2.4.0",
+            "create_time": "Fri, 25 Jul 2025 01:41:23 GMT"
+        },
+        "hostname": "colab-gpu1",
+        "gpus": [
+            {
+                "id": 3,
+                "uuid": "APU-9ef794038d61cec8",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            },
+            {
+                "id": 4,
+                "uuid": "APU-cd3d721c3e2ca740",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Fri, 25 Jul 2025 07:35:02 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "577": {
+        "uuid": "u9d556e6",
+        "username": "admin",
+        "flavor": {
+            "id": 27,
+            "cpu": 32,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 524288
+        },
+        "task": {
+            "id": 236,
+            "uuid": "u9d556e6",
+            "_type": "LAB",
+            "project_uuid": "p0317338",
+            "owner": "ansys_dev",
+            "image": "p0317338/ansys:v251-fix2",
+            "create_time": "Fri, 18 Jul 2025 03:27:47 GMT"
+        },
+        "hostname": "colab-gpu2",
+        "gpus": [
+            {
+                "id": 19,
+                "uuid": "APU-0aa7bc50b60c1639",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Mon, 28 Jul 2025 08:25:46 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "600": {
+        "uuid": "u11cd37f",
+        "username": "ntu_csie",
+        "flavor": {
+            "id": 27,
+            "cpu": 32,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 524288
+        },
+        "task": {
+            "id": 251,
+            "uuid": "u11cd37f",
+            "_type": "LAB",
+            "project_uuid": "p346264e",
+            "owner": "ntu_csie",
+            "image": "myelintek/pytorch:rocm6.3.4_ubuntu24.04_py3.10_pytorch_release_2.4.0",
+            "create_time": "Sat, 02 Aug 2025 08:05:37 GMT"
+        },
+        "hostname": "colab-gpu1",
+        "gpus": [
+            {
+                "id": 5,
+                "uuid": "APU-6db4351aaa9e98cb",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Sat, 02 Aug 2025 08:07:19 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "605": {
+        "uuid": "uc5d46c1",
+        "username": "easycard",
+        "flavor": {
+            "id": 26,
+            "cpu": 16,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 262144
+        },
+        "task": {
+            "id": 252,
+            "uuid": "uc5d46c1",
+            "_type": "LAB",
+            "project_uuid": "p00f0fdd",
+            "owner": "easycard",
+            "image": "myelintek/pytorch:rocm6.3.4_ubuntu24.04_py3.10_pytorch_release_2.4.0",
+            "create_time": "Mon, 04 Aug 2025 06:39:13 GMT"
+        },
+        "hostname": "colab-gpu4",
+        "gpus": [
+            {
+                "id": 31,
+                "uuid": "APU-86259c107add5246",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Mon, 04 Aug 2025 06:43:24 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "607": {
+        "uuid": "u9f35b79",
+        "username": "tku_csie",
+        "flavor": {
+            "id": 27,
+            "cpu": 32,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 524288
+        },
+        "task": {
+            "id": 253,
+            "uuid": "u9f35b79",
+            "_type": "LAB",
+            "project_uuid": "p3748415",
+            "owner": "tku_csie",
+            "image": "myelintek/labub5d8e31:1754036445",
+            "create_time": "Mon, 04 Aug 2025 06:58:15 GMT"
+        },
+        "hostname": "colab-gpu4",
+        "gpus": [
+            {
+                "id": 30,
+                "uuid": "APU-bf590377d394aed2",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Mon, 04 Aug 2025 06:58:15 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "609": {
+        "uuid": "ub5d8e31",
+        "username": "admin",
+        "flavor": {
+            "id": 16,
+            "cpu": 16,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 131072
+        },
+        "task": {
+            "id": 244,
+            "uuid": "ub5d8e31",
+            "_type": "LAB",
+            "project_uuid": "pa7ab3f9",
+            "owner": "admin",
+            "image": "myelintek/pytorch:rocm6.3.4_ubuntu24.04_py3.10_pytorch_release_2.4.0",
+            "create_time": "Fri, 01 Aug 2025 06:39:08 GMT"
+        },
+        "hostname": "colab-gpu1",
+        "gpus": [
+            {
+                "id": 1,
+                "uuid": "APU-90b885244f097908",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Mon, 04 Aug 2025 08:49:39 GMT",
+        "end": "Tue, 05 Aug 2025 05:55:46 GMT",
+        "total_seconds": 21346.9281
+    },
+    "610": {
+        "uuid": "u5214252",
+        "username": "ntt_data",
+        "flavor": {
+            "id": 26,
+            "cpu": 16,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 262144
+        },
+        "task": {
+            "id": 243,
+            "uuid": "u5214252",
+            "_type": "LAB",
+            "project_uuid": "pe0874a0",
+            "owner": "admin",
+            "image": "myelintek/labu1f682d9:1750235191",
+            "create_time": "Thu, 31 Jul 2025 07:56:21 GMT"
+        },
+        "hostname": "colab-gpu2",
+        "gpus": [
+            {
+                "id": 20,
+                "uuid": "APU-d05f7e012c71584d",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Mon, 04 Aug 2025 09:57:47 GMT",
+        "end": null,
+        "total_seconds": 86399
+    },
+    "611": {
+        "uuid": "e910d112",
+        "username": "easycard",
+        "flavor": {
+            "id": 16,
+            "cpu": 16,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 131072
+        },
+        "task": {
+            "id": 254,
+            "uuid": "e910d112",
+            "_type": "WEBAPP",
+            "project_uuid": "p00f0fdd",
+            "owner": "easycard",
+            "image": "192.168.10.101:5000/myelintek/streamlit:0.0.0.1",
+            "create_time": "Tue, 05 Aug 2025 04:00:22 GMT"
+        },
+        "hostname": "colab-gpu4",
+        "gpus": [
+            {
+                "id": 29,
+                "uuid": "APU-54430e3ac47a8d2f",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Tue, 05 Aug 2025 04:00:22 GMT",
+        "end": null,
+        "total_seconds": 71976.107052
+    },
+    "612": {
+        "uuid": "u9ac89ef",
+        "username": "admin",
+        "flavor": {
+            "id": 16,
+            "cpu": 16,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 131072
+        },
+        "task": {
+            "id": 255,
+            "uuid": "u9ac89ef",
+            "_type": "LAB",
+            "project_uuid": "pa7ab3f9",
+            "owner": "admin",
+            "image": "pa7ab3f9/pytorch:rocm6.3.3_ubuntu24.04_py3.12_pytorch_release_2.4.0",
+            "create_time": "Tue, 05 Aug 2025 06:21:48 GMT"
+        },
+        "hostname": "colab-gpu1",
+        "gpus": [
+            {
+                "id": 1,
+                "uuid": "APU-90b885244f097908",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Tue, 05 Aug 2025 06:21:48 GMT",
+        "end": "Tue, 05 Aug 2025 06:55:36 GMT",
+        "total_seconds": 2028.045498
+    },
+    "613": {
+        "uuid": "ub5d8e31",
+        "username": "admin",
+        "flavor": {
+            "id": 16,
+            "cpu": 16,
+            "gpu": 1,
+            "gpu_type": "AMD Instinct MI300X",
+            "memory": 131072
+        },
+        "task": {
+            "id": 244,
+            "uuid": "ub5d8e31",
+            "_type": "LAB",
+            "project_uuid": "pa7ab3f9",
+            "owner": "admin",
+            "image": "myelintek/pytorch:rocm6.3.4_ubuntu24.04_py3.10_pytorch_release_2.4.0",
+            "create_time": "Fri, 01 Aug 2025 06:39:08 GMT"
+        },
+        "hostname": "colab-gpu4",
+        "gpus": [
+            {
+                "id": 32,
+                "uuid": "APU-01a5eab75aaf10ac",
+                "name": "AMD Instinct MI300X",
+                "memory": 196592,
+                "mig": false
+            }
+        ],
+        "start": "Tue, 05 Aug 2025 06:58:15 GMT",
+        "end": null,
+        "total_seconds": 61303.324055
+    }
+}

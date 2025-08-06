@@ -205,6 +205,49 @@ class GPUDataCollector:
         
         return gpu_user_map
     
+    def map_absolute_gpu_to_card_id(self, absolute_gpu_id, hostname):
+        """將絕對 GPU ID 轉換為我們系統的 Card ID
+        
+        根據硬體配置，每個節點有 8 個 GPU：
+        - colab-gpu1: GPU 1-8  -> Card [1, 9, 17, 25, 33, 41, 49, 57]
+        - colab-gpu2: GPU 9-16 -> Card [1, 9, 17, 25, 33, 41, 49, 57] 
+        - colab-gpu3: GPU 17-24 -> Card [1, 9, 17, 25, 33, 41, 49, 57]
+        - colab-gpu4: GPU 25-32 -> Card [1, 9, 17, 25, 33, 41, 49, 57]
+        
+        但從實際數據看，API 回傳的 GPU ID 分佈是：
+        - colab-gpu1: GPU 1-5 (實際使用的 GPU)
+        - colab-gpu2: GPU 17-20 (實際使用的 GPU)
+        - colab-gpu4: GPU 25-32 (實際使用的 GPU)
+        """
+        # 計算在該節點內的相對 GPU 編號 (1-8)
+        if hostname == "colab-gpu1":
+            relative_gpu = absolute_gpu_id  # GPU 1-8
+        elif hostname == "colab-gpu2":
+            # colab-gpu2 的 GPU ID 範圍是 17-20，但應該對應到 Card [1, 9, 17, 25]
+            if 17 <= absolute_gpu_id <= 24:
+                relative_gpu = absolute_gpu_id - 16  # GPU 17-24 -> 1-8
+            else:
+                return None
+        elif hostname == "colab-gpu3":
+            if 17 <= absolute_gpu_id <= 24:
+                relative_gpu = absolute_gpu_id - 16  # GPU 17-24 -> 1-8
+            else:
+                return None
+        elif hostname == "colab-gpu4":
+            if 25 <= absolute_gpu_id <= 32:
+                relative_gpu = absolute_gpu_id - 24  # GPU 25-32 -> 1-8
+            else:
+                return None
+        else:
+            return None
+        
+        # 將相對 GPU 編號 (1-8) 轉換為 Card ID
+        if 1 <= relative_gpu <= 8:
+            gpu_index = relative_gpu - 1  # 轉換為 0-7 索引
+            return self.gpu_index_to_card[gpu_index]
+        
+        return None
+    
     def process_gpu_data(self, ip, name, date_str, timestamp_start, timestamp_end):
         """處理單一節點的 GPU 數據"""
         ip_outdir = self.data_dir / name / date_str
@@ -311,10 +354,13 @@ class GPUDataCollector:
                     csv_file = colab_outdir / f"gpu{gpu_index}_{date_str}.csv"
                     card_id = self.gpu_index_to_card[gpu_index]
                     
-                    # 查找使用者 (透過 card ID 或 GPU ID 對應)
+                    # 查找使用者 (透過絕對 GPU ID 轉換為 Card ID 對應)
                     username = "未使用"
-                    for gpu_id, user in gpu_user_map.items():
-                        if gpu_id == card_id:  # 使用 card ID 對應
+                    
+                    # 嘗試通過絕對 GPU ID 找到對應使用者
+                    for absolute_gpu_id, user in gpu_user_map.items():
+                        mapped_card_id = self.map_absolute_gpu_to_card_id(absolute_gpu_id, name)
+                        if mapped_card_id == card_id:
                             username = user
                             break
                     
@@ -358,9 +404,9 @@ class GPUDataCollector:
                 
                 f.write(f"全部平均,{overall_avg_gpu:.2f},{overall_avg_vram:.2f},所有使用者\n")
                 print(f"結果已保存至 {avg_csv}")
-                
-                # 生成摘要報告
-                self.generate_summary_report(colab_outdir, date_str, name, overall_avg_gpu, overall_avg_vram)
+            
+            # 生成摘要報告 (確保 CSV 檔案已完全寫入)
+            self.generate_summary_report(colab_outdir, date_str, name, overall_avg_gpu, overall_avg_vram)
     
     def generate_summary_report(self, outdir, date_str, name, overall_avg_gpu, overall_avg_vram):
         """生成摘要報告"""
@@ -417,20 +463,25 @@ class GPUDataCollector:
             if avg_csv.exists():
                 try:
                     df = pd.read_csv(avg_csv)
-                    for _, row in df.iterrows():
-                        if row['GPU編號'] != '全部平均':
-                            gpu_id = row['GPU編號']
-                            gpu_usage = row['平均GPU使用率(%)']
-                            vram_usage = row['平均VRAM使用率(%)']
-                            
-                            # 讀取使用者資訊欄位 (如果存在)
-                            username = ""
-                            if '使用者' in row and pd.notna(row['使用者']):
-                                username = f" (使用者: {row['使用者']})"
-                            
-                            f.write(f"{gpu_id}: GPU使用率 = {gpu_usage}%, VRAM使用率 = {vram_usage}%{username}\n")
+                    if df.empty:
+                        f.write("錯誤：平均值 CSV 檔案為空\n")
+                    else:
+                        for _, row in df.iterrows():
+                            if row['GPU編號'] != '全部平均':
+                                gpu_id = row['GPU編號']
+                                gpu_usage = row['平均GPU使用率(%)']
+                                vram_usage = row['平均VRAM使用率(%)']
+                                
+                                # 讀取使用者資訊欄位 (如果存在)
+                                username = ""
+                                if '使用者' in row and pd.notna(row['使用者']):
+                                    username = f" (使用者: {row['使用者']})"
+                                
+                                f.write(f"{gpu_id}: GPU使用率 = {gpu_usage}%, VRAM使用率 = {vram_usage}%{username}\n")
                 except Exception as e:
                     f.write(f"錯誤：無法讀取平均值數據: {e}\n")
+            else:
+                f.write("錯誤：平均值 CSV 檔案不存在\n")
             
             f.write(f"\n整體平均 GPU 使用率: {overall_avg_gpu:.2f}%\n")
             f.write(f"整體平均 VRAM 使用率: {overall_avg_vram:.2f}%\n")
