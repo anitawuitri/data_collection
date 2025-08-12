@@ -366,23 +366,26 @@ class VRAMMonitor:
         print(f"節點 VRAM 對比圖已保存至: {save_path}")
         return save_path
 
-    def plot_vram_heatmap(self, start_date, end_date):
+    def plot_vram_heatmap(self, start_date, end_date, show_users=True):
         """
-        繪製 VRAM 使用率熱力圖
+        繪製 VRAM 使用率熱力圖（包含使用者資訊）
         
         Args:
             start_date (str): 開始日期
             end_date (str): 結束日期
+            show_users (bool): 是否顯示使用者資訊
         """
         dates = pd.date_range(start=start_date, end=end_date, freq='D')
         
-        # 創建數據矩陣
+        # 創建數據矩陣和使用者資訊
         vram_data = []
         row_labels = []
+        user_info = {}  # 儲存每個GPU的使用者資訊
         
         for node in self.nodes:
             for gpu_id in self.gpu_ids:
                 daily_usage = []
+                gpu_key = f"{node}_GPU{gpu_id}"
                 
                 for date in dates:
                     date_str = date.strftime('%Y-%m-%d')
@@ -401,9 +404,34 @@ class VRAMMonitor:
                             daily_usage.append(0)
                     else:
                         daily_usage.append(0)
+                    
+                    # 收集使用者資訊（從 average 檔案）
+                    if show_users:
+                        avg_file = os.path.join(self.data_dir, node, date_str, f"average_{date_str}.csv")
+                        if os.path.exists(avg_file):
+                            try:
+                                avg_df = pd.read_csv(avg_file)
+                                if not avg_df.empty and '使用者' in avg_df.columns and 'GPU編號' in avg_df.columns:
+                                    # 找到對應的 GPU 編號
+                                    gpu_row = avg_df[avg_df['GPU編號'] == f'GPU[{gpu_id // 8}]']
+                                    if not gpu_row.empty and not pd.isna(gpu_row['使用者'].iloc[0]):
+                                        user = gpu_row['使用者'].iloc[0]
+                                        if gpu_key not in user_info:
+                                            user_info[gpu_key] = set()
+                                        user_info[gpu_key].add(user)
+                            except Exception as e:
+                                pass  # 忽略讀取錯誤
                 
                 vram_data.append(daily_usage)
-                row_labels.append(f"{node}\nGPU {gpu_id}")
+                
+                # 創建包含使用者資訊的標籤
+                if show_users and gpu_key in user_info and len(user_info[gpu_key]) > 0:
+                    users_str = ', '.join(sorted(user_info[gpu_key])[:3])  # 最多顯示3個使用者
+                    if len(user_info[gpu_key]) > 3:
+                        users_str += f" (+{len(user_info[gpu_key])-3})"
+                    row_labels.append(f"{node}\nGPU {gpu_id}\n[{users_str}]")
+                else:
+                    row_labels.append(f"{node}\nGPU {gpu_id}")
         
         if not vram_data:
             print("沒有可用的 VRAM 數據來生成熱力圖")
@@ -435,18 +463,26 @@ class VRAMMonitor:
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel('VRAM 使用率 (%)', rotation=-90, va="bottom", fontsize=12)
         
-        ax.set_title(f'GPU VRAM 使用率熱力圖\n期間: {start_date} 至 {end_date}', 
-                    fontsize=16, fontweight='bold', pad=20)
+        # 設定標題
+        title = f'GPU VRAM 使用率熱力圖\n期間: {start_date} 至 {end_date}'
+        if show_users:
+            title += '\n(包含使用者資訊)'
+        ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
         ax.set_xlabel('日期', fontsize=12)
         ax.set_ylabel('節點 & GPU', fontsize=12)
         
         plt.tight_layout()
         
-        save_path = os.path.join(self.plots_dir, f'vram_heatmap_{start_date}_to_{end_date}.png')
+        # 檔案名稱包含使用者資訊標記
+        filename = f'vram_heatmap_{start_date}_to_{end_date}'
+        if show_users:
+            filename += '_with_users'
+        save_path = os.path.join(self.plots_dir, f'{filename}.png')
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.close()
         
         print(f"VRAM 熱力圖已保存至: {save_path}")
+        return save_path
         
         return save_path
     

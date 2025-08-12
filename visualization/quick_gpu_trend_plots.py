@@ -636,15 +636,16 @@ def quick_vram_nodes_comparison(start_date, end_date, data_dir="../data", plots_
     monitor = VRAMMonitor(data_dir, plots_dir)
     return monitor.plot_nodes_vram_comparison(start_date, end_date, gpu_id)
 
-def quick_vram_heatmap(start_date, end_date, data_dir="../data", plots_dir="../plots"):
+def quick_vram_heatmap(start_date, end_date, data_dir="../data", plots_dir="../plots", show_users=True):
     """
-    快速繪製 VRAM 使用率熱力圖
+    快速繪製 VRAM 使用率熱力圖（包含使用者資訊）
     
     Args:
         start_date (str): 開始日期 (YYYY-MM-DD)
         end_date (str): 結束日期 (YYYY-MM-DD)
         data_dir (str): 資料目錄
         plots_dir (str): 輸出目錄
+        show_users (bool): 是否顯示使用者資訊
         
     Returns:
         str: 保存的圖片路徑
@@ -654,7 +655,7 @@ def quick_vram_heatmap(start_date, end_date, data_dir="../data", plots_dir="../p
         return None
         
     monitor = VRAMMonitor(data_dir, plots_dir)
-    return monitor.plot_vram_heatmap(start_date, end_date)
+    return monitor.plot_vram_heatmap(start_date, end_date, show_users)
 
 def quick_vram_timeline(node, gpu_id, date, data_dir="../data", plots_dir="../plots"):
     """
@@ -775,9 +776,9 @@ def generate_all_vram_plots(start_date, end_date, data_dir="../data", plots_dir=
         if path:
             generated_plots.append(path)
         
-        # 2. VRAM 熱力圖
-        print("\n2. 生成 VRAM 使用率熱力圖...")
-        path = quick_vram_heatmap(start_date, end_date, data_dir, plots_dir)
+        # 2. VRAM 熱力圖（包含使用者資訊）
+        print("\n2. 生成 VRAM 使用率熱力圖（包含使用者資訊）...")
+        path = quick_vram_heatmap(start_date, end_date, data_dir, plots_dir, show_users=True)
         if path:
             generated_plots.append(path)
         

@@ -16,7 +16,7 @@ import json
 import requests
 import pandas as pd
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import time
 from urllib.parse import urlencode
@@ -71,19 +71,23 @@ class GPUDataCollector:
             return False
     
     def calculate_timestamps(self, date_str):
-        """計算指定日期的開始和結束時間戳"""
-        # 計算當天開始時間戳記 (00:00:00 UTC)
+        """計算指定日期的開始和結束時間戳（使用台灣時區 UTC+8）"""
+        # 定義台灣時區 (UTC+8)
+        taiwan_tz = timezone(timedelta(hours=8))
+        
+        # 計算當天開始時間戳記 (00:00:00 台灣時間)
         start_dt = datetime.strptime(f"{date_str} 00:00:00", '%Y-%m-%d %H:%M:%S')
-        start_dt = start_dt.replace(tzinfo=timezone.utc)
+        start_dt = start_dt.replace(tzinfo=taiwan_tz)
         timestamp_start = int(start_dt.timestamp())
         
-        # 計算當天結束時間戳記 (23:59:59 UTC)
+        # 計算當天結束時間戳記 (23:59:59 台灣時間)
         end_dt = datetime.strptime(f"{date_str} 23:59:59", '%Y-%m-%d %H:%M:%S')
-        end_dt = end_dt.replace(tzinfo=timezone.utc)
+        end_dt = end_dt.replace(tzinfo=taiwan_tz)
         timestamp_end = int(end_dt.timestamp())
         
-        print(f"{date_str} 的時間戳記計算...")
-        print(f"計算時間戳記: {timestamp_start} (UTC)")
+        print(f"{date_str} 的時間戳記計算（台灣時區 UTC+8）...")
+        print(f"開始時間: {start_dt.strftime('%Y-%m-%d %H:%M:%S %Z')} -> {timestamp_start}")
+        print(f"結束時間: {end_dt.strftime('%Y-%m-%d %H:%M:%S %Z')} -> {timestamp_end}")
         
         return timestamp_start, timestamp_end
     
@@ -305,13 +309,15 @@ class GPUDataCollector:
             
             # 處理每個時間點的數據
             csv_rows = []
+            taiwan_tz = timezone(timedelta(hours=8))
+            
             for row in gpu_data:
                 if len(row) >= 2:
                     timestamp = row[0]
                     gpu_util = row[1] if row[1] is not None else 0
                     
-                    # 轉換時間戳為日期時間字串
-                    dt = datetime.fromtimestamp(timestamp)
+                    # 轉換時間戳為台灣時區的日期時間字串
+                    dt = datetime.fromtimestamp(timestamp, tz=taiwan_tz)
                     datetime_str = dt.strftime('%Y-%m-%d %H:%M:%S')
                     
                     # 獲取對應的 VRAM 使用率

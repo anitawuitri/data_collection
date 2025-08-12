@@ -49,6 +49,7 @@ show_usage() {
     echo "  heatmap <開始日期> <結束日期> 生成 GPU 使用率熱力圖（包含使用者資訊）"
     echo "  vram-users <開始日期> <結束日期> 生成 VRAM 使用者活動摘要"
     echo "  vram-compare <開始日期> <結束日期> 生成 VRAM 節點對比圖（包含使用者資訊）"
+    echo "  vram-heatmap <開始日期> <結束日期> 生成 VRAM 熱力圖（包含使用者資訊）"
     echo "  users <開始日期> <結束日期>   僅生成使用者活動摘要圖表"
     echo "  test                     運行功能測試"
     echo "  test-all                 運行完整測試套件"
@@ -63,6 +64,7 @@ show_usage() {
     echo "  $0 heatmap 2025-08-04 2025-08-05 # 生成熱力圖"
     echo "  $0 vram-users 2025-08-04 2025-08-05 # VRAM 使用者摘要"
     echo "  $0 vram-compare 2025-08-04 2025-08-05 # VRAM 節點對比"
+    echo "  $0 vram-heatmap 2025-08-04 2025-08-05 # VRAM 熱力圖"
     echo "  $0 users 2025-08-04 2025-08-05   # 使用者活動摘要"
     echo "  $0 test                       # 運行測試"
     echo "  $0 test-all                   # 運行完整測試套件"
@@ -212,6 +214,28 @@ else:
     print_success "VRAM 節點對比圖生成完成"
 }
 
+# 生成 VRAM 熱力圖
+generate_vram_heatmap() {
+    local start_date=$1
+    local end_date=$2
+    
+    print_info "生成 VRAM 熱力圖（包含使用者資訊）..."
+    
+    cd visualization
+    python3 -c "
+from quick_gpu_trend_plots import quick_vram_heatmap
+path = quick_vram_heatmap('$start_date', '$end_date', show_users=True)
+if path:
+    print('VRAM 熱力圖生成完成！')
+    print(f'保存至: {path}')
+else:
+    print('VRAM 熱力圖生成失敗')
+"
+    cd ..
+    
+    print_success "VRAM 熱力圖生成完成"
+}
+
 # 生成使用者活動摘要
 generate_user_summary() {
     local start_date=$1
@@ -347,6 +371,17 @@ main() {
             validate_date "$1"
             validate_date "$2"
             generate_vram_comparison "$1" "$2"
+            ;;
+        "vram-heatmap")
+            if [ $# -ne 2 ]; then
+                print_error "vram-heatmap 命令需要開始日期和結束日期"
+                show_usage
+                exit 1
+            fi
+            check_python_env
+            validate_date "$1"
+            validate_date "$2"
+            generate_vram_heatmap "$1" "$2"
             ;;
         "users")
             if [ $# -ne 2 ]; then

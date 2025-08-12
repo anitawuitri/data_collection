@@ -22,18 +22,19 @@ domain="192.168.10.100"
 username="ntnu_ee"
 access_token="eyJhbGciOiJIUzI1NiIsImFwaV9hZGRyZXNzIjoiaHR0cDovLzE5Mi4xNjguMTAuMTAwOjgwIiwidHlwIjoiSldUIn0.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0Nzc5NzI3NywianRpIjoiNjUyZDk1ZjEtODU0MC00OTYyLTg4MDItZmJlZGJiMTQyOWFhIiwidHlwZSI6ImFjY2VzcyIsImlkZW50aXR5IjoiYWRtaW4iLCJuYmYiOjE3NDc3OTcyNzcsInJvbGUiOlsiQWRtaW4iXX0.mDdQeARC1MhzAaVik67cKRX4bq8M5C36reUDNWroLd8"
 
-time_start="2025-08-05 00:00:00"
-time_end="2025-08-05 23:59:59"
+time_start="2025-08-06 00:00:00"
+time_end="2025-08-06 23:59:59"
+json_file_ntu_ee="ntu_ee_data.json"
 json_file="user_data.json"
 
 
-# curl -G "http://$domain/api/v2/consumption/task" \
-#   --data-urlencode "start_t=$time_start" \
-#   --data-urlencode "end_t=$time_end" \
-#   --data-urlencode "username=$username" \
-#   -H 'accept: application/json' \
-#   -H "Authorization: Bearer $access_token" \
-#   -o "$json_file"
+ curl -G "http://$domain/api/v2/consumption/task" \
+   --data-urlencode "start_t=$time_start" \
+   --data-urlencode "end_t=$time_end" \
+   --data-urlencode "username=$username" \
+   -H 'accept: application/json' \
+   -H "Authorization: Bearer $access_token" \
+   -o "$json_file_ntu_ee"
 
 
 curl -G "http://$domain/api/v2/consumption/task" \

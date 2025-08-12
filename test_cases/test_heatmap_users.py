@@ -24,7 +24,7 @@ def test_heatmap_with_users():
     # 測試參數
     start_date = "2025-08-04"
     end_date = "2025-08-05"
-    plots_dir = "../../plots"
+    plots_dir = "../plots"
     
     print(f"\n1. 測試生成包含使用者資訊的熱力圖...")
     print(f"   日期範圍: {start_date} 至 {end_date}")
@@ -78,7 +78,7 @@ def test_direct_analyzer():
     try:
         from advanced_gpu_trend_analyzer import GPUUsageTrendAnalyzer
         
-        analyzer = GPUUsageTrendAnalyzer("../../data", "../../plots")
+        analyzer = GPUUsageTrendAnalyzer("../data", "../plots")
         
         print("✓ GPUUsageTrendAnalyzer 導入成功")
         
@@ -101,7 +101,7 @@ def compare_heatmap_files():
     print("\n比較熱力圖檔案...")
     print("-" * 40)
     
-    plots_dir = "../../plots"
+    plots_dir = "../plots"
     with_users_file = f"{plots_dir}/heatmap_2025-08-04_to_2025-08-05_with_users.png"
     without_users_file = f"{plots_dir}/heatmap_2025-08-04_to_2025-08-05.png"
     
