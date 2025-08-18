@@ -114,10 +114,12 @@ show_usage() {
     echo "  nodes [開始日期] [結束日期]     - 生成節點對比趨勢圖"
     echo "  node [節點名稱] [開始日期] [結束日期] - 生成單一節點所有 GPU 趨勢圖"
     echo "  gpu [GPU_ID] [開始日期] [結束日期]   - 生成特定 GPU 跨節點對比圖"
+    echo "  stacked [開始日期] [結束日期]        - 🔥 生成各節點 GPU 使用率堆疊區域圖"
     echo "  heatmap [開始日期] [結束日期]   - 生成熱力圖"
     echo "  timeline [節點] [GPU_ID] [日期] - 生成詳細時間序列圖"
     echo ""
     echo "  🔥 VRAM 監控功能:"
+    echo "  vram-stacked [開始日期] [結束日期]       - 🔥 生成各節點 VRAM 使用率堆疊區域圖"
     echo "  vram-nodes [開始日期] [結束日期] [GPU_ID] - 生成各節點 VRAM 對比圖"
     echo "  vram-heatmap [開始日期] [結束日期]       - 生成 VRAM 使用率熱力圖"
     echo "  vram-timeline [節點] [GPU_ID] [日期]     - 生成 VRAM 時間序列圖"
@@ -136,6 +138,8 @@ show_usage() {
     echo "  $0 nodes 2025-05-23 2025-05-26"
     echo "  $0 node colab-gpu1 2025-05-23 2025-05-26"
     echo "  $0 gpu 1 2025-05-23 2025-05-26"
+    echo "  $0 stacked 2025-05-23 2025-05-26"
+    echo "  $0 vram-stacked 2025-05-23 2025-05-26"
     echo "  $0 vram-nodes 2025-05-23 2025-05-26 1"
     echo "  $0 vram-heatmap 2025-05-23 2025-05-26"
     echo "  $0 vram-all 2025-05-23 2025-05-26"
@@ -238,6 +242,52 @@ quick_gpu_across_nodes($gpu_id, '$start_date', '$end_date', data_dir='$DATA_DIR'
 "
     
     print_success "GPU $gpu_id 跨節點對比圖生成完成"
+}
+
+# 生成各節點堆疊區域圖
+run_stacked() {
+    local start_date=$1
+    local end_date=$2
+    
+    if [ -z "$start_date" ] || [ -z "$end_date" ]; then
+        print_error "缺少日期參數"
+        show_usage
+        exit 1
+    fi
+    
+    print_info "生成各節點 GPU 使用率堆疊區域圖..."
+    
+    $PYTHON_CMD -c "
+import sys
+sys.path.append('$VISUALIZATION_DIR')
+from quick_gpu_trend_plots import quick_nodes_stacked_utilization
+quick_nodes_stacked_utilization('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+"
+    
+    print_success "各節點堆疊區域圖生成完成"
+}
+
+# 生成各節點 VRAM 使用率堆疊區域圖
+run_vram_stacked() {
+    local start_date=$1
+    local end_date=$2
+    
+    if [ -z "$start_date" ] || [ -z "$end_date" ]; then
+        print_error "缺少日期參數"
+        show_usage
+        exit 1
+    fi
+    
+    print_info "生成各節點 VRAM 使用率堆疊區域圖..."
+    
+    $PYTHON_CMD -c "
+import sys
+sys.path.append('$VISUALIZATION_DIR')
+from quick_gpu_trend_plots import quick_nodes_vram_stacked_utilization
+quick_nodes_vram_stacked_utilization('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+"
+    
+    print_success "各節點 VRAM 堆疊區域圖生成完成"
 }
 
 # 生成進階分析圖表
@@ -498,6 +548,9 @@ main() {
         "gpu")
             run_gpu "$2" "$3" "$4"
             ;;
+        "stacked")
+            run_stacked "$2" "$3"
+            ;;
         "heatmap")
             run_advanced "$2" "$3" "heatmap"
             ;;
@@ -514,6 +567,9 @@ main() {
                 --date "$4" \
                 --start-date "$4" \
                 --end-date "$4"
+            ;;
+        "vram-stacked")
+            run_vram_stacked "$2" "$3"
             ;;
         "vram-nodes")
             run_vram_nodes "$2" "$3" "$4"

@@ -11,7 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import glob
 
@@ -396,6 +396,157 @@ def quick_gpu_across_nodes(gpu_index, start_date, end_date, data_dir="../data", 
     
     return save_path
 
+def quick_nodes_stacked_utilization(start_date, end_date, data_dir="../data", plots_dir="../plots", show_users=True):
+    """
+    繪製各節點 GPU 使用率累積的堆疊區域圖
+    按節點分層顯示使用率累積情況，更清楚地展示各節點的貢獻
+    
+    Args:
+        start_date (str): 開始日期 (YYYY-MM-DD)
+        end_date (str): 結束日期 (YYYY-MM-DD)
+        data_dir (str): 資料目錄
+        plots_dir (str): 輸出目錄
+        show_users (bool): 是否在圖表中顯示使用者資訊
+        
+    Returns:
+        str: 保存的圖片路徑
+    """
+    nodes = ['colab-gpu1', 'colab-gpu2', 'colab-gpu3', 'colab-gpu4']
+    node_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']  # 節點專用顏色
+    
+    os.makedirs(plots_dir, exist_ok=True)
+    
+    # 調整圖表大小以容納使用者資訊
+    fig_height = 12 if show_users else 10
+    fig, ax = plt.subplots(figsize=(18, fig_height))
+    
+    # 生成日期範圍
+    dates = pd.date_range(start=start_date, end=end_date, freq='D')
+    date_list = [date.strftime('%Y-%m-%d') for date in dates]
+    
+    # 存儲各節點的使用率數據
+    node_data = {}  # {node: [daily_avg_usage]}
+    node_user_info = {}  # {node: {date: [users]}}
+    
+    # 收集各節點的平均使用率數據
+    for node in nodes:
+        node_usage_data = []
+        node_user_info[node] = {}
+        
+        for date in dates:
+            date_str = date.strftime('%Y-%m-%d')
+            avg_file = os.path.join(data_dir, node, date_str, f"average_{date_str}.csv")
+            
+            daily_avg = 0
+            active_users = []
+            
+            if os.path.exists(avg_file):
+                df = load_gpu_data_with_users(avg_file)
+                if df is not None:
+                    # 過濾掉 "全部平均" 行並計算節點平均使用率
+                    gpu_data = df[~df['gpu'].str.contains('全部平均', na=False)]
+                    
+                    if not gpu_data.empty:
+                        # 計算該節點當日的平均GPU使用率
+                        usage_values = pd.to_numeric(gpu_data['usage'], errors='coerce')
+                        daily_avg = usage_values.mean()
+                        
+                        if np.isnan(daily_avg):
+                            daily_avg = 0
+                        
+                        # 收集使用者資訊
+                        if show_users:
+                            for _, row in gpu_data.iterrows():
+                                user = row.get('user', '未知')
+                                usage = pd.to_numeric(row.get('usage', 0), errors='coerce')
+                                if user and user not in ['未使用', '未知'] and usage > 1:
+                                    if user not in active_users:
+                                        active_users.append(user)
+            
+            node_usage_data.append(daily_avg)
+            node_user_info[node][date_str] = active_users
+        
+        node_data[node] = node_usage_data
+    
+    # 繪製堆疊區域圖
+    bottom = np.zeros(len(date_list))
+    
+    for i, node in enumerate(nodes):
+        values = node_data[node]
+        
+        # 構建標籤
+        label = node
+        if show_users:
+            # 獲取最後一天的使用者資訊
+            last_date = date_list[-1]
+            users = node_user_info[node].get(last_date, [])
+            if users:
+                user_str = ', '.join(users[:3])  # 最多顯示3個使用者
+                if len(users) > 3:
+                    user_str += f'等{len(users)}人'
+                label += f' ({user_str})'
+        
+        # 繪製堆疊區域
+        ax.fill_between(range(len(date_list)), bottom, bottom + values, 
+                       label=label, alpha=0.8, color=node_colors[i])
+        bottom += values
+    
+    # 設定圖表標題
+    title = f'各節點 GPU 使用率累積視圖（堆疊區域圖）\n期間: {start_date} 至 {end_date}'
+    
+    if show_users:
+        # 統計活躍使用者總數
+        all_users = set()
+        for node in nodes:
+            for date_users in node_user_info[node].values():
+                all_users.update(date_users)
+        if all_users:
+            title += f'\n\n總活躍使用者數: {len(all_users)} 人'
+    
+    ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
+    ax.set_xlabel('日期', fontsize=12)
+    ax.set_ylabel('累積 GPU 使用率 (%)', fontsize=12)
+    
+    # 設定 x 軸
+    ax.set_xticks(range(0, len(date_list), max(1, len(date_list)//10)))
+    ax.set_xticklabels([date_list[i] for i in range(0, len(date_list), max(1, len(date_list)//10))], 
+                       rotation=45)
+    
+    # 添加網格和圖例
+    ax.grid(True, alpha=0.3)
+    
+    # 優化圖例位置，避免與統計框重疊
+    legend = ax.legend(loc='upper right', bbox_to_anchor=(0.98, 0.98), 
+                      frameon=True, framealpha=0.9, fancybox=True, shadow=True)
+    legend.get_frame().set_facecolor('white')
+    legend.get_frame().set_edgecolor('gray')
+    
+    # 添加統計資訊文字框
+    max_utilization = np.max(bottom)
+    avg_utilization = np.mean(bottom)
+    
+    stats_text = f'統計資訊:\n'
+    stats_text += f'最大累積使用率: {max_utilization:.1f}%\n'
+    stats_text += f'平均累積使用率: {avg_utilization:.1f}%\n'
+    
+    # 計算各節點平均貢獻
+    for i, node in enumerate(nodes):
+        node_avg = np.mean(node_data[node])
+        stats_text += f'{node}: {node_avg:.1f}%\n'
+    
+    # 在圖表左上角添加統計框，與圖例分離
+    ax.text(0.02, 0.75, stats_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.9))
+    
+    plt.tight_layout()
+    
+    save_path = os.path.join(plots_dir, f'nodes_stacked_utilization_{start_date}_to_{end_date}.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"各節點累積使用率堆疊區域圖已保存至: {save_path}")
+    plt.close()
+    
+    return save_path
+
 def quick_user_activity_summary(start_date, end_date, data_dir="../data", plots_dir="../plots"):
     """
     生成使用者活動摘要圖表
@@ -576,22 +727,27 @@ def generate_all_quick_plots(start_date=None, end_date=None, data_dir="../data",
         if plot_path:
             generated_plots.append(plot_path)
     
-    # 5. GPU 使用率熱力圖
-    print("\n5. 生成 GPU 使用率熱力圖...")
+    # 5. 🔥 各節點 GPU 使用率累積堆疊視圖（新功能）
+    print("\n5. 生成各節點 GPU 使用率累積堆疊視圖...")
+    plot_path = quick_nodes_stacked_utilization(start_date, end_date, data_dir, plots_dir, show_users)
+    generated_plots.append(plot_path)
+    
+    # 6. GPU 使用率熱力圖
+    print("\n6. 生成 GPU 使用率熱力圖...")
     plot_path = quick_gpu_heatmap(start_date, end_date, data_dir, plots_dir, show_users)
     if plot_path:
         generated_plots.append(plot_path)
     
-    # 6. VRAM 使用者活動摘要（如果啟用使用者資訊且 VRAM 可用）
+    # 7. VRAM 使用者活動摘要（如果啟用使用者資訊且 VRAM 可用）
     if show_users and VRAM_AVAILABLE:
-        print("\n6. 生成 VRAM 使用者活動摘要...")
+        print("\n7. 生成 VRAM 使用者活動摘要...")
         plot_path = quick_vram_user_activity_summary(start_date, end_date, data_dir, plots_dir)
         if plot_path:
             generated_plots.append(plot_path)
     
-    # 7. VRAM 節點對比圖（包含使用者資訊）
+    # 8. VRAM 節點對比圖（包含使用者資訊）
     if VRAM_AVAILABLE:
-        print(f"\n7. 生成 VRAM 節點對比圖（{'包含' if show_users else '不包含'}使用者資訊）...")
+        print(f"\n8. 生成 VRAM 節點對比圖（{'包含' if show_users else '不包含'}使用者資訊）...")
         plot_path = quick_vram_nodes_comparison_with_users(start_date, end_date, data_dir, plots_dir, show_users=show_users)
         if plot_path:
             generated_plots.append(plot_path)
@@ -829,3 +985,204 @@ if __name__ == '__main__':
         else:
             print("未找到任何可用的 GPU 數據")
             print("請確認 './data' 目錄中包含正確格式的數據檔案")
+
+def quick_nodes_vram_stacked_utilization(start_date, end_date, data_dir="../data", plots_dir="../plots", show_users=True):
+    """
+    生成各節點 VRAM 使用率累積堆疊區域圖
+    
+    Args:
+        start_date (str): 開始日期 (YYYY-MM-DD)
+        end_date (str): 結束日期 (YYYY-MM-DD)
+        data_dir (str): 資料目錄路徑
+        plots_dir (str): 圖表輸出目錄路徑
+        show_users (bool): 是否顯示使用者資訊
+        
+    Returns:
+        str: 生成的圖片檔案路徑
+    """
+    try:
+        # 設定中文字體
+        setup_chinese_font()
+        
+        # 生成日期列表
+        start = datetime.strptime(start_date, '%Y-%m-%d')
+        end = datetime.strptime(end_date, '%Y-%m-%d')
+        dates = []
+        current = start
+        while current <= end:
+            dates.append(current)
+            current += timedelta(days=1)
+        
+        date_list = [date.strftime('%Y-%m-%d') for date in dates]
+        nodes = ['colab-gpu1', 'colab-gpu2', 'colab-gpu3', 'colab-gpu4']
+        
+        # 收集各節點的 VRAM 數據
+        node_data = {}
+        node_user_info = {}
+        
+        # 節點顏色配置
+        node_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+        
+        # 收集各節點的平均 VRAM 使用率數據
+        for node in nodes:
+            node_vram_data = []
+            node_user_info[node] = {}
+            
+            for date in dates:
+                date_str = date.strftime('%Y-%m-%d')
+                avg_file = os.path.join(data_dir, node, date_str, f"average_{date_str}.csv")
+                
+                daily_avg = 0
+                active_users = []
+                
+                if os.path.exists(avg_file):
+                    df = load_gpu_data_with_users(avg_file)
+                    if df is not None:
+                        # 檢查是否有 VRAM 列
+                        has_vram_data = 'vram' in df.columns or '平均VRAM使用率(%)' in df.columns
+                        
+                        if has_vram_data:
+                            # 確保使用正確的列名
+                            if '平均VRAM使用率(%)' in df.columns:
+                                df = df.rename(columns={'平均VRAM使用率(%)': 'vram'})
+                            
+                            # 過濾掉 "全部平均" 行並計算節點平均 VRAM 使用率
+                            gpu_data = df[~df['gpu'].str.contains('全部平均', na=False)]
+                            
+                            if not gpu_data.empty:
+                                # 計算該節點當日的平均 VRAM 使用率
+                                vram_values = pd.to_numeric(gpu_data['vram'], errors='coerce')
+                                # 過濾掉 NaN 值
+                                vram_values = vram_values.dropna()
+                                
+                                if len(vram_values) > 0:
+                                    daily_avg = vram_values.mean()
+                                else:
+                                    daily_avg = 0
+                                
+                                # 收集使用者資訊（所有有 VRAM 使用的用戶）
+                                if show_users:
+                                    for _, row in gpu_data.iterrows():
+                                        user = row.get('user', '未知')
+                                        vram_usage = pd.to_numeric(row.get('vram', 0), errors='coerce')
+                                        # 只收集有實際 VRAM 使用的使用者（>= 0.1%）
+                                        if user and user not in ['未使用', '未知'] and not pd.isna(vram_usage) and vram_usage >= 0.1:
+                                            if user not in active_users:
+                                                active_users.append(user)
+                
+                node_vram_data.append(daily_avg)
+                # 將當天的使用者資訊存儲
+                node_user_info[node][date_str] = active_users.copy()
+            
+            # 將所有日期的使用者合併到節點資訊中
+            all_node_users = set()
+            for date_users in node_user_info[node].values():
+                all_node_users.update(date_users)
+            node_user_info[node]['all_users'] = list(all_node_users)
+            
+            node_data[node] = node_vram_data
+        
+        # 創建堆疊區域圖
+        fig, ax = plt.subplots(figsize=(15, 10))
+        
+        # 繪製堆疊區域圖
+        bottom = np.zeros(len(date_list))
+        
+        for i, node in enumerate(nodes):
+            values = np.array(node_data[node])
+            
+            # 構建標籤，包含使用者資訊
+            label = node
+            if show_users:
+                # 獲取該節點在整個期間的所有使用者
+                all_users = node_user_info[node].get('all_users', [])
+                if all_users:
+                    # 根據使用者數量決定顯示方式
+                    if len(all_users) <= 2:
+                        user_str = ', '.join(all_users)
+                    elif len(all_users) == 3:
+                        user_str = ', '.join(all_users)
+                    else:
+                        # 超過3個使用者，顯示前2個加上總數
+                        user_str = ', '.join(all_users[:2]) + f' 等{len(all_users)}人'
+                    
+                    label += f' ({user_str})'
+                else:
+                    # 如果沒有找到活躍使用者，檢查是否有任何使用者記錄
+                    has_any_user = False
+                    for date_str in date_list:
+                        if date_str in node_user_info[node] and node_user_info[node][date_str]:
+                            has_any_user = True
+                            break
+                    
+                    if not has_any_user:
+                        label += ' (無使用者)'
+            
+            # 繪製堆疊區域
+            ax.fill_between(range(len(date_list)), bottom, bottom + values, 
+                           label=label, alpha=0.8, color=node_colors[i])
+            bottom += values
+        
+        # 設定圖表標題
+        title = f'各節點 VRAM 使用率累積視圖（堆疊區域圖）\n期間: {start_date} 至 {end_date}'
+        
+        if show_users:
+            # 統計活躍使用者總數
+            all_users = set()
+            for node in nodes:
+                for date_users in node_user_info[node].values():
+                    all_users.update(date_users)
+            if all_users:
+                title += f'\n\n總活躍使用者數: {len(all_users)} 人'
+        
+        ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
+        ax.set_xlabel('日期', fontsize=12)
+        ax.set_ylabel('累積 VRAM 使用率 (%)', fontsize=12)
+        
+        # 設定 Y 軸範圍，確保從 0 開始
+        max_vram = np.max(bottom) if len(bottom) > 0 and np.max(bottom) > 0 else 1.0
+        ax.set_ylim(0, max_vram * 1.1)  # 上限增加 10% 留白
+        
+        # 設定 x 軸
+        ax.set_xticks(range(0, len(date_list), max(1, len(date_list)//10)))
+        ax.set_xticklabels([date_list[i] for i in range(0, len(date_list), max(1, len(date_list)//10))], 
+                           rotation=45)
+        
+        # 添加網格和圖例
+        ax.grid(True, alpha=0.3)
+        
+        # 優化圖例位置，避免與統計框重疊
+        legend = ax.legend(loc='upper right', bbox_to_anchor=(0.98, 0.98), 
+                          frameon=True, framealpha=0.9, fancybox=True, shadow=True)
+        legend.get_frame().set_facecolor('white')
+        legend.get_frame().set_edgecolor('gray')
+        
+        # 添加統計資訊文字框
+        max_vram_utilization = np.max(bottom)
+        avg_vram_utilization = np.mean(bottom)
+        
+        stats_text = f'VRAM 統計資訊:\n'
+        stats_text += f'最大累積使用率: {max_vram_utilization:.1f}%\n'
+        stats_text += f'平均累積使用率: {avg_vram_utilization:.1f}%\n'
+        
+        # 計算各節點平均貢獻
+        for i, node in enumerate(nodes):
+            node_avg = np.mean(node_data[node])
+            stats_text += f'{node}: {node_avg:.1f}%\n'
+        
+        # 在圖表左上角添加統計框，與圖例分離
+        ax.text(0.02, 0.75, stats_text, transform=ax.transAxes, fontsize=10,
+                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='lightcyan', alpha=0.9))
+        
+        plt.tight_layout()
+        
+        save_path = os.path.join(plots_dir, f'nodes_vram_stacked_utilization_{start_date}_to_{end_date}.png')
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"各節點 VRAM 累積使用率堆疊區域圖已保存至: {save_path}")
+        plt.close()
+        
+        return save_path
+        
+    except Exception as e:
+        print(f"生成 VRAM 堆疊區域圖時發生錯誤: {e}")
+        return None
