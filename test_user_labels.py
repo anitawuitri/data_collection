@@ -18,7 +18,7 @@ def check_user_data_collection():
     
     # 測試期間
     start_date = '2025-07-16'
-    end_date = '2025-08-04'
+    end_date = '2025-08-17'
     
     # 生成日期列表（檢查前幾天）
     start = datetime.strptime(start_date, '%Y-%m-%d')
@@ -81,7 +81,7 @@ def test_label_display():
         # 生成 VRAM 堆疊圖
         result = quick_nodes_vram_stacked_utilization(
             start_date='2025-07-16', 
-            end_date='2025-08-04',
+            end_date='2025-08-17',
             data_dir='data',
             plots_dir='plots',
             show_users=True
@@ -164,7 +164,7 @@ def main():
         print("   • colab-gpu4 (itrd, nycubme)")
         
         print("\n📈 查看生成的圖表:")
-        print("   plots/nodes_vram_stacked_utilization_2025-07-16_to_2025-08-04.png")
+        print("   plots/nodes_vram_stacked_utilization_2025-07-16_to_2025-08-17.png")
         
         return True
     else:

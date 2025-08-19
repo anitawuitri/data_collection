@@ -186,7 +186,9 @@ def quick_nodes_trend(start_date, end_date, data_dir="../data", plots_dir="../pl
     
     plt.tight_layout()
     
-    save_path = os.path.join(plots_dir, f'nodes_trend_{start_date}_to_{end_date}.png')
+    # 根據 show_users 參數決定檔名
+    suffix = "_with_users" if show_users else "_without_users"
+    save_path = os.path.join(plots_dir, f'nodes_trend_{start_date}_to_{end_date}{suffix}.png')
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"節點趨勢圖已保存至: {save_path}")
     plt.close()
@@ -902,7 +904,7 @@ def quick_gpu_heatmap(start_date, end_date, data_dir="../data", plots_dir="../pl
         print(f"無法導入 advanced_gpu_trend_analyzer: {e}")
         return None
 
-def generate_all_vram_plots(start_date, end_date, data_dir="../data", plots_dir="../plots"):
+def generate_all_vram_plots(start_date, end_date, data_dir="../data", plots_dir="../plots", show_users=True):
     """
     生成所有 VRAM 相關圖表
     
@@ -911,6 +913,7 @@ def generate_all_vram_plots(start_date, end_date, data_dir="../data", plots_dir=
         end_date (str): 結束日期 (YYYY-MM-DD)
         data_dir (str): 資料目錄
         plots_dir (str): 輸出目錄
+        show_users (bool): 是否在圖表中顯示使用者資訊
         
     Returns:
         list: 生成的圖表路徑列表
@@ -920,26 +923,39 @@ def generate_all_vram_plots(start_date, end_date, data_dir="../data", plots_dir=
         return []
         
     print("==================================================")
-    print("VRAM 使用量圖表生成")
+    print(f"VRAM 使用量圖表生成（{'包含' if show_users else '不包含'}使用者資訊）")
     print("==================================================")
     
     generated_plots = []
     
     try:
-        # 1. 節點 VRAM 對比圖
-        print("1. 生成各節點 VRAM 對比圖...")
-        path = quick_vram_nodes_comparison(start_date, end_date, data_dir, plots_dir)
+        # 1. 節點 VRAM 對比圖（包含使用者資訊控制）
+        print(f"1. 生成各節點 VRAM 對比圖（{'包含' if show_users else '不包含'}使用者資訊）...")
+        path = quick_vram_nodes_comparison_with_users(start_date, end_date, data_dir, plots_dir, show_users=show_users)
         if path:
             generated_plots.append(path)
         
-        # 2. VRAM 熱力圖（包含使用者資訊）
-        print("\n2. 生成 VRAM 使用率熱力圖（包含使用者資訊）...")
-        path = quick_vram_heatmap(start_date, end_date, data_dir, plots_dir, show_users=True)
+        # 2. VRAM 使用率堆疊區域圖
+        print(f"\n2. 生成各節點 VRAM 使用率堆疊區域圖（{'包含' if show_users else '不包含'}使用者資訊）...")
+        path = quick_nodes_vram_stacked_utilization(start_date, end_date, data_dir, plots_dir, show_users)
         if path:
             generated_plots.append(path)
         
-        # 3. 特定 GPU 的 VRAM 對比圖
-        print("\n3. 生成 GPU 1 VRAM 跨節點對比圖...")
+        # 3. VRAM 熱力圖（包含使用者資訊控制）
+        print(f"\n3. 生成 VRAM 使用率熱力圖（{'包含' if show_users else '不包含'}使用者資訊）...")
+        path = quick_vram_heatmap(start_date, end_date, data_dir, plots_dir, show_users=show_users)
+        if path:
+            generated_plots.append(path)
+        
+        # 4. 使用者活動摘要圖（僅在啟用使用者資訊時）
+        if show_users:
+            print("\n4. 生成 VRAM 使用者活動摘要圖...")
+            path = quick_vram_user_activity_summary(start_date, end_date, data_dir, plots_dir)
+            if path:
+                generated_plots.append(path)
+        
+        # 5. 特定 GPU 的 VRAM 對比圖
+        print(f"\n{'5' if show_users else '4'}. 生成 GPU 1 VRAM 跨節點對比圖...")
         path = quick_vram_nodes_comparison(start_date, end_date, data_dir, plots_dir, gpu_id=1)
         if path:
             generated_plots.append(path)
@@ -947,6 +963,8 @@ def generate_all_vram_plots(start_date, end_date, data_dir="../data", plots_dir=
         print("\n==================================================")
         print(f"所有 VRAM 圖表已生成完成！共 {len(generated_plots)} 張圖片")
         print(f"保存位置: {plots_dir}")
+        if show_users:
+            print("✓ 包含使用者資訊")
         print("==================================================")
         
     except Exception as e:
@@ -1176,7 +1194,9 @@ def quick_nodes_vram_stacked_utilization(start_date, end_date, data_dir="../data
         
         plt.tight_layout()
         
-        save_path = os.path.join(plots_dir, f'nodes_vram_stacked_utilization_{start_date}_to_{end_date}.png')
+        # 根據 show_users 參數決定檔名
+        suffix = "_with_users" if show_users else "_without_users"
+        save_path = os.path.join(plots_dir, f'nodes_vram_stacked_utilization_{start_date}_to_{end_date}{suffix}.png')
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"各節點 VRAM 累積使用率堆疊區域圖已保存至: {save_path}")
         plt.close()

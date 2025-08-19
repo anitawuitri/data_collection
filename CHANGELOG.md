@@ -1,5 +1,125 @@
 # GPU 監控系統更新記錄
 
+## [2.6] - 2025-01-XX
+### Added
+- vram-all 命令添加 show_users 參數，完成所有主要命令的使用者資訊控制
+- 完整的 VRAM 監控使用者顯示控制系統
+- 智能 VRAM 圖表生成，支援 5/4 圖表變化模式
+
+### Changed
+- vram-all 命令現在支援第三個參數控制使用者資訊顯示
+- generate_all_vram_plots 函數支援 show_users 參數
+- 統一所有主要命令的使用者資訊控制介面
+
+### Technical Details
+- 實現 5/4 圖表變化系統（show_users=True: 5張圖，show_users=False: 4張圖）
+- VRAM 使用者活動摘要圖僅在 show_users=True 時生成
+- 完成使用者顯示控制系統的全面實現
+
+## [2.5] - 2025-01-XX
+### Added
+- quick 命令添加 show_users 參數，允許批次控制使用者資訊顯示
+- 彈性圖表生成系統，支援條件性圖表建立
+- 智能使用者資訊檔案命名，包含 _with_users 和 _without_users 後綴
+
+### Changed
+- quick 命令現在支援第三個參數控制使用者資訊顯示
+- generate_all_quick_plots 函數支援 show_users 參數
+- 優化批次圖表生成邏輯，提高生成效率
+
+### Technical Details
+- 實現 8/6 圖表變化系統（show_users=True: 8張圖，show_users=False: 6張圖）
+- 使用者活動摘要圖和時段分布圖僅在 show_users=True 時生成
+
+---
+
+## 🎉 版本 v2.4 - 節點趨勢圖使用者顯示控制參數 (2025-12-05)
+
+### 🆕 新增功能
+- **nodes 命令增強**: 節點對比趨勢圖新增 `show_users` 參數支援
+- **統一使用者控制**: nodes 和 vram-stacked 命令均支援使用者資訊顯示開關
+- **靈活檔案命名**: nodes 命令根據使用者顯示設定自動產生描述性檔名
+- **一致的使用體驗**: 與 VRAM 堆疊圖相同的參數格式和行為
+
+### 🔧 技術改進
+- **`quick_nodes_trend()` 函數增強**: 支援 `show_users` 參數和智慧檔名生成
+- **命令行參數統一**: 支援 `true/false`, `1/0`, `yes/no` 等多種布林值格式
+- **向後相容性**: 預設顯示使用者資訊，維持現有行為
+- **圖表高度自適應**: 根據是否顯示使用者資訊調整圖表高度
+
+### 🎯 使用範例
+```bash
+# 預設顯示使用者資訊
+./run_gpu_visualization.sh nodes 2025-08-11 2025-08-17
+
+# 明確顯示使用者資訊  
+./run_gpu_visualization.sh nodes 2025-08-11 2025-08-17 true
+
+# 不顯示使用者資訊
+./run_gpu_visualization.sh nodes 2025-08-11 2025-08-17 false
+```
+
+### 📊 生成檔案命名規則
+- **包含使用者**: `nodes_trend_[日期範圍]_with_users.png`
+- **不含使用者**: `nodes_trend_[日期範圍]_without_users.png`
+
+### 📈 視覺化差異
+- **顯示使用者模式**: 圖表標題包含使用者資訊，圖表高度增加至 10
+- **隱藏使用者模式**: 純節點比較圖，專注硬體效能數據，圖表高度 8
+
+### 🧪 測試驗證
+- ✅ nodes 命令參數正確傳遞
+- ✅ 檔名後綴自動生成（_with_users / _without_users）
+- ✅ 圖表內容根據參數正確顯示/隱藏使用者資訊
+- ✅ 向後相容性維持
+- ✅ 與 vram-stacked 命令行為一致
+
+### 🔄 功能統一
+現在以下命令都支援使用者資訊控制：
+- `nodes` - 節點對比趨勢圖
+- `vram-stacked` - VRAM 堆疊區域圖
+
+---
+
+## 🎉 版本 v2.3 - VRAM 堆疊圖使用者顯示控制參數 (2025-12-05)
+
+### 🆕 新增功能
+- **使用者顯示控制**: VRAM 堆疊區域圖新增 `show_users` 參數
+- **靈活圖表生成**: 可選擇顯示或隱藏使用者資訊
+- **智慧檔名命名**: 根據使用者顯示設定自動產生描述性檔名
+- **命令行參數支援**: 透過命令行第三個參數控制使用者顯示
+
+### 🔧 技術改進
+- **參數驗證**: 支援多種布林值格式（true/false, 1/0, yes/no）
+- **預設行為**: 預設顯示使用者資訊，保持向後相容性
+- **檔名後綴**: 自動添加 `_with_users` 或 `_without_users` 後綴
+- **使用說明更新**: 詳細的命令行使用範例和參數說明
+
+### 🎯 使用範例
+```bash
+# 預設顯示使用者資訊
+./run_gpu_visualization.sh vram-stacked 2025-08-11 2025-08-17
+
+# 顯示使用者資訊
+./run_gpu_visualization.sh vram-stacked 2025-08-11 2025-08-17 true
+
+# 不顯示使用者資訊
+./run_gpu_visualization.sh vram-stacked 2025-08-11 2025-08-17 false
+```
+
+### 📊 生成檔案命名規則
+- **包含使用者**: `nodes_vram_stacked_utilization_[日期範圍]_with_users.png`
+- **不含使用者**: `nodes_vram_stacked_utilization_[日期範圍]_without_users.png`
+
+### 🧪 測試驗證
+- ✅ 參數正確傳遞到 Python 函數
+- ✅ 布林值轉換正確處理
+- ✅ 檔名後綴正確生成
+- ✅ 圖表內容根據參數正確顯示/隱藏使用者資訊
+- ✅ 向後相容性維持（預設顯示使用者）
+
+---
+
 ## 🎉 版本 v2.2 - VRAM 堆疊區域圖視覺化 (2025-12-05)
 
 ### 🆕 新增功能

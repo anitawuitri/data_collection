@@ -110,20 +110,24 @@ show_usage() {
     echo ""
     echo "選項:"
     echo "  setup                           - 創建 Python 虛擬環境並安裝依賴套件"
-    echo "  quick [開始日期] [結束日期]     - 快速生成所有常用圖表"
-    echo "  nodes [開始日期] [結束日期]     - 生成節點對比趨勢圖"
+    echo "  quick [開始日期] [結束日期] [顯示使用者] - 快速生成所有常用圖表"
+    echo "                                          (顯示使用者: true/false，預設:true)"
+    echo "  nodes [開始日期] [結束日期] [顯示使用者] - 生成節點對比趨勢圖"
+    echo "                                        (顯示使用者: true/false，預設:true)"
     echo "  node [節點名稱] [開始日期] [結束日期] - 生成單一節點所有 GPU 趨勢圖"
     echo "  gpu [GPU_ID] [開始日期] [結束日期]   - 生成特定 GPU 跨節點對比圖"
     echo "  stacked [開始日期] [結束日期]        - 🔥 生成各節點 GPU 使用率堆疊區域圖"
     echo "  heatmap [開始日期] [結束日期]   - 生成熱力圖"
     echo "  timeline [節點] [GPU_ID] [日期] - 生成詳細時間序列圖"
-    echo ""
+  echo ""
     echo "  🔥 VRAM 監控功能:"
-    echo "  vram-stacked [開始日期] [結束日期]       - 🔥 生成各節點 VRAM 使用率堆疊區域圖"
+    echo "  vram-stacked [開始日期] [結束日期] [顯示使用者] - 🔥 生成各節點 VRAM 使用率堆疊區域圖"
+    echo "                                              (顯示使用者: true/false，預設:true)"
     echo "  vram-nodes [開始日期] [結束日期] [GPU_ID] - 生成各節點 VRAM 對比圖"
     echo "  vram-heatmap [開始日期] [結束日期]       - 生成 VRAM 使用率熱力圖"
     echo "  vram-timeline [節點] [GPU_ID] [日期]     - 生成 VRAM 時間序列圖"
-    echo "  vram-all [開始日期] [結束日期]           - 生成所有 VRAM 圖表"
+    echo "  vram-all [開始日期] [結束日期] [顯示使用者] - 生成所有 VRAM 圖表"
+    echo "                                          (顯示使用者: true/false，預設:true)"
     echo ""
     echo "  examples                        - 執行所有範例"
     echo "  auto                            - 自動偵測日期範圍並生成所有圖表"
@@ -134,15 +138,19 @@ show_usage() {
     echo ""
     echo "範例:"
     echo "  $0 setup                         - 初始化 Python 虛擬環境"
-    echo "  $0 quick 2025-05-23 2025-05-26"
-    echo "  $0 nodes 2025-05-23 2025-05-26"
+    echo "  $0 quick 2025-05-23 2025-05-26           # 預設顯示使用者資訊"
+    echo "  $0 quick 2025-05-23 2025-05-26 false     # 不顯示使用者資訊"
+    echo "  $0 nodes 2025-05-23 2025-05-26           # 預設顯示使用者資訊"
+    echo "  $0 nodes 2025-05-23 2025-05-26 false     # 不顯示使用者資訊"
     echo "  $0 node colab-gpu1 2025-05-23 2025-05-26"
     echo "  $0 gpu 1 2025-05-23 2025-05-26"
     echo "  $0 stacked 2025-05-23 2025-05-26"
-    echo "  $0 vram-stacked 2025-05-23 2025-05-26"
+    echo "  $0 vram-stacked 2025-05-23 2025-05-26        # 預設顯示使用者資訊"
+    echo "  $0 vram-stacked 2025-05-23 2025-05-26 false  # 不顯示使用者資訊"
     echo "  $0 vram-nodes 2025-05-23 2025-05-26 1"
     echo "  $0 vram-heatmap 2025-05-23 2025-05-26"
-    echo "  $0 vram-all 2025-05-23 2025-05-26"
+    echo "  $0 vram-all 2025-05-23 2025-05-26            # 預設顯示使用者資訊"
+    echo "  $0 vram-all 2025-05-23 2025-05-26 false      # 不顯示使用者資訊"
     echo "  $0 auto"
     echo ""
 }
@@ -151,22 +159,31 @@ show_usage() {
 run_quick() {
     local start_date=$1
     local end_date=$2
+    local show_users=${3:-"true"}  # 預設顯示使用者資訊
     
-    print_info "快速生成所有常用 GPU 趨勢圖..."
+    # 轉換字串為 Python boolean
+    local python_show_users
+    if [ "$show_users" = "false" ] || [ "$show_users" = "0" ] || [ "$show_users" = "no" ]; then
+        python_show_users="False"
+        print_info "快速生成所有常用 GPU 趨勢圖（不顯示使用者資訊）..."
+    else
+        python_show_users="True"
+        print_info "快速生成所有常用 GPU 趨勢圖（包含使用者資訊）..."
+    fi
     
     if [ -z "$start_date" ] || [ -z "$end_date" ]; then
         $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import generate_all_quick_plots
-generate_all_quick_plots(data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+generate_all_quick_plots(data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR', show_users=$python_show_users)
 "
     else
         $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import generate_all_quick_plots
-generate_all_quick_plots('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+generate_all_quick_plots('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR', show_users=$python_show_users)
 "
     fi
     
@@ -177,6 +194,7 @@ generate_all_quick_plots('$start_date', '$end_date', data_dir='$DATA_DIR', plots
 run_nodes() {
     local start_date=$1
     local end_date=$2
+    local show_users=${3:-"true"}  # 預設顯示使用者資訊
     
     if [ -z "$start_date" ] || [ -z "$end_date" ]; then
         print_error "缺少日期參數"
@@ -184,13 +202,21 @@ run_nodes() {
         exit 1
     fi
     
-    print_info "生成節點對比趨勢圖..."
+    # 轉換字串為 Python boolean
+    local python_show_users
+    if [ "$show_users" = "false" ] || [ "$show_users" = "0" ] || [ "$show_users" = "no" ]; then
+        python_show_users="False"
+        print_info "生成節點對比趨勢圖（不顯示使用者資訊）..."
+    else
+        python_show_users="True"
+        print_info "生成節點對比趨勢圖（包含使用者資訊）..."
+    fi
     
     $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import quick_nodes_trend
-quick_nodes_trend('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+quick_nodes_trend('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR', show_users=$python_show_users)
 "
     
     print_success "節點對比圖生成完成"
@@ -271,6 +297,7 @@ quick_nodes_stacked_utilization('$start_date', '$end_date', data_dir='$DATA_DIR'
 run_vram_stacked() {
     local start_date=$1
     local end_date=$2
+    local show_users=${3:-"true"}  # 預設顯示使用者資訊
     
     if [ -z "$start_date" ] || [ -z "$end_date" ]; then
         print_error "缺少日期參數"
@@ -278,13 +305,21 @@ run_vram_stacked() {
         exit 1
     fi
     
-    print_info "生成各節點 VRAM 使用率堆疊區域圖..."
+    # 轉換字串為 Python boolean
+    local python_show_users
+    if [ "$show_users" = "false" ] || [ "$show_users" = "0" ] || [ "$show_users" = "no" ]; then
+        python_show_users="False"
+        print_info "生成各節點 VRAM 使用率堆疊區域圖（不顯示使用者資訊）..."
+    else
+        python_show_users="True"
+        print_info "生成各節點 VRAM 使用率堆疊區域圖（包含使用者資訊）..."
+    fi
     
     $PYTHON_CMD -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import quick_nodes_vram_stacked_utilization
-quick_nodes_vram_stacked_utilization('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+quick_nodes_vram_stacked_utilization('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR', show_users=$python_show_users)
 "
     
     print_success "各節點 VRAM 堆疊區域圖生成完成"
@@ -420,6 +455,7 @@ quick_vram_timeline('$node', $gpu_id, '$date', data_dir='$DATA_DIR', plots_dir='
 run_vram_all() {
     local start_date=$1
     local end_date=$2
+    local show_users=${3:-"true"}  # 預設顯示使用者資訊
     
     if [ -z "$start_date" ] || [ -z "$end_date" ]; then
         print_error "缺少日期參數"
@@ -427,13 +463,21 @@ run_vram_all() {
         exit 1
     fi
     
-    print_info "生成所有 VRAM 監控圖表..."
+    # 轉換字串為 Python boolean
+    local python_show_users
+    if [ "$show_users" = "false" ] || [ "$show_users" = "0" ] || [ "$show_users" = "no" ]; then
+        python_show_users="False"
+        print_info "生成所有 VRAM 監控圖表（不顯示使用者資訊）..."
+    else
+        python_show_users="True"
+        print_info "生成所有 VRAM 監控圖表（包含使用者資訊）..."
+    fi
     
     python3 -c "
 import sys
 sys.path.append('$VISUALIZATION_DIR')
 from quick_gpu_trend_plots import generate_all_vram_plots
-generate_all_vram_plots('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR')
+generate_all_vram_plots('$start_date', '$end_date', data_dir='$DATA_DIR', plots_dir='$PLOTS_DIR', show_users=$python_show_users)
 "
     
     print_success "所有 VRAM 圖表生成完成"
@@ -537,10 +581,10 @@ main() {
     
     case "$command" in
         "quick")
-            run_quick "$2" "$3"
+            run_quick "$2" "$3" "$4"
             ;;
         "nodes")
-            run_nodes "$2" "$3"
+            run_nodes "$2" "$3" "$4"
             ;;
         "node")
             run_node "$2" "$3" "$4"
@@ -569,7 +613,7 @@ main() {
                 --end-date "$4"
             ;;
         "vram-stacked")
-            run_vram_stacked "$2" "$3"
+            run_vram_stacked "$2" "$3" "$4"
             ;;
         "vram-nodes")
             run_vram_nodes "$2" "$3" "$4"
@@ -581,7 +625,7 @@ main() {
             run_vram_timeline "$2" "$3" "$4"
             ;;
         "vram-all")
-            run_vram_all "$2" "$3"
+            run_vram_all "$2" "$3" "$4"
             ;;
         "examples")
             run_examples
