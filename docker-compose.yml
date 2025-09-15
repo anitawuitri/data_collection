@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # AMD GPU 監控主服務
+  gpu-monitor:
+    build: .
+    container_name: amd-gpu-monitor
+    restart: unless-stopped
+    environment:
+      - DATA_DIR=/app/data
+      - PLOTS_DIR=/app/plots
+      - MANAGEMENT_API_URL=${MANAGEMENT_API_URL:-http://192.168.10.100/api/v2/consumption/task}
+      - MANAGEMENT_API_TOKEN=${MANAGEMENT_API_TOKEN}
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./plots:/app/plots
+      - ./logs:/app/logs
+    networks:
+      - gpu-monitor-network
+    depends_on:
+      - redis
+    command: ["collect", "daily"]
+
+  # Redis 快取服務 (可選)
+  redis:
+    image: redis:7-alpine
+    container_name: gpu-monitor-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gpu-monitor-network
+    command: redis-server --appendonly yes
+
+  # 資料視覺化服務 (可選)
+  visualizer:
+    build: .
+    container_name: gpu-monitor-visualizer
+    restart: unless-stopped
+    environment:
+      - DATA_DIR=/app/data
+      - PLOTS_DIR=/app/plots
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./plots:/app/plots
+    networks:
+      - gpu-monitor-network
+    profiles:
+      - visualization
+    command: ["visualize", "dashboard", "today"]
+
+  # 排程服務 (使用 cron 模擬)
+  scheduler:
+    build: .
+    container_name: gpu-monitor-scheduler
+    restart: unless-stopped
+    environment:
+      - DATA_DIR=/app/data
+      - PLOTS_DIR=/app/plots
+      - MANAGEMENT_API_URL=${MANAGEMENT_API_URL:-http://192.168.10.100/api/v2/consumption/task}
+      - MANAGEMENT_API_TOKEN=${MANAGEMENT_API_TOKEN}
+    volumes:
+      - ./data:/app/data
+      - ./plots:/app/plots
+      - ./logs:/app/logs
+    networks:
+      - gpu-monitor-network
+    profiles:
+      - scheduler
+    entrypoint: |
+      sh -c '
+      echo "0 0 * * * gpu-monitor collect daily >> /app/logs/cron.log 2>&1" | crontab -
+      echo "30 0 * * * gpu-monitor visualize quick \$$(date -d yesterday +%Y-%m-%d) >> /app/logs/cron.log 2>&1" | crontab -
+      crond -f
+      '
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  gpu-monitor-network:
+    driver: bridge
