@@ -51,6 +51,9 @@ show_usage() {
     echo "  vram-compare <開始日期> <結束日期> 生成 VRAM 節點對比圖（包含使用者資訊）"
     echo "  vram-heatmap <開始日期> <結束日期> 生成 VRAM 熱力圖（包含使用者資訊）"
     echo "  users <開始日期> <結束日期>   僅生成使用者活動摘要圖表"
+    echo "  query-user <使用者> <日期>    查詢特定使用者的 GPU 使用情況"
+    echo "  query-user <使用者> <開始日期> <結束日期> 查詢使用者多日 GPU 使用情況"
+    echo "  list-users <日期>            列出指定日期的所有 GPU 使用者"
     echo "  test                     運行功能測試"
     echo "  test-all                 運行完整測試套件"
     echo "  verify                   驗證圖表檔案"
@@ -66,6 +69,9 @@ show_usage() {
     echo "  $0 vram-compare 2025-08-04 2025-08-05 # VRAM 節點對比"
     echo "  $0 vram-heatmap 2025-08-04 2025-08-05 # VRAM 熱力圖"
     echo "  $0 users 2025-08-04 2025-08-05   # 使用者活動摘要"
+    echo "  $0 query-user paslab_openai 2025-08-15 # 查詢特定使用者"
+    echo "  $0 query-user itrd 2025-07-20 2025-07-25 # 查詢使用者多日"
+    echo "  $0 list-users 2025-08-15     # 列出所有使用者"
     echo "  $0 test                       # 運行測試"
     echo "  $0 test-all                   # 運行完整測試套件"
 }
@@ -393,6 +399,34 @@ main() {
             validate_date "$1"
             validate_date "$2"
             generate_user_summary "$1" "$2"
+            ;;
+        "query-user")
+            if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+                print_error "query-user 命令格式: query-user <使用者> <日期> 或 query-user <使用者> <開始日期> <結束日期>"
+                show_usage
+                exit 1
+            fi
+            check_python_env
+            local username=$1
+            local start_date=$2
+            local end_date=$3
+            validate_date "$start_date"
+            if [ -n "$end_date" ]; then
+                validate_date "$end_date"
+                python3 get_user_gpu_usage.py "$username" "$start_date" "$end_date"
+            else
+                python3 get_user_gpu_usage.py "$username" "$start_date"
+            fi
+            ;;
+        "list-users")
+            if [ $# -ne 1 ]; then
+                print_error "list-users 命令需要一個日期參數"
+                show_usage
+                exit 1
+            fi
+            check_python_env
+            validate_date "$1"
+            python3 get_user_gpu_usage.py --list-users "$1"
             ;;
         "test")
             check_python_env
