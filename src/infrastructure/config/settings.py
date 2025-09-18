@@ -8,6 +8,14 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 from pathlib import Path
 
+# 載入 .env 檔案
+from dotenv import load_dotenv
+
+# 載入當前目錄的 .env 檔案
+env_path = Path(__file__).parent.parent.parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
 
 @dataclass
 class NodeConfig:

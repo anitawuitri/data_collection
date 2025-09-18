@@ -62,10 +62,11 @@ def cli(ctx, config_file: Optional[str], data_dir: Optional[str],
             
         ctx.obj['config'] = config
         
-        if verbose:
+        if ctx.obj.get('verbose'):
             click.echo(f"📂 數據目錄: {config.data_dir}")
             click.echo(f"📊 圖表目錄: {config.plots_dir}")
             click.echo(f"🖥️  節點數量: {len(config.nodes)}")
+            click.echo(f"🔑 管理 API: {'已配置' if config.api.bearer_token else '未配置 (僅收集 Netdata)'}")
             
     except Exception as e:
         click.echo(f"❌ 配置載入失敗: {e}", err=True)
@@ -117,6 +118,18 @@ def status(ctx):
     click.echo(f"🎮 GPU 配置: {len(config.gpu.card_ids)} 個 GPU")
     click.echo(f"   Card IDs: {config.gpu.card_ids}")
     click.echo(f"   Indices: {config.gpu.indices}")
+    
+    # 檢查 API 配置
+    click.echo(f"🔗 API 配置:")
+    click.echo(f"   管理 API URL: {config.api.management_url}")
+    if config.api.bearer_token:
+        token_preview = config.api.bearer_token[:10] + "..." if len(config.api.bearer_token) > 10 else config.api.bearer_token
+        click.echo(f"   ✅ Bearer Token: {token_preview} (已設定)")
+        click.echo(f"   📋 功能: Netdata + 使用者資訊收集")
+    else:
+        click.echo(f"   ❌ Bearer Token: 未設定")
+        click.echo(f"   📋 功能: 僅 Netdata 收集")
+        click.echo(f"   💡 設定 MANAGEMENT_API_TOKEN 環境變數可啟用使用者資訊收集")
 
 
 # 註冊子命令

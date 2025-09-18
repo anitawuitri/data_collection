@@ -141,12 +141,12 @@ gpu-monitor visualize trends 2025-09-01 2025-09-15
 
 4. **數據收集**：
    ```bash
-   poetry run gpu-monitor collect daily
+   python3 -m src collect daily
    ```
 
 5. **查詢使用者**：
    ```bash
-   poetry run gpu-monitor query user paslab_openai 2025-09-15
+   python3 -m src query user paslab_openai 2025-09-15
    ```
 
 ### Docker 部署
@@ -163,7 +163,7 @@ gpu-monitor visualize trends 2025-09-01 2025-09-15
 
 3. **執行命令**：
    ```bash
-   docker-compose exec gpu-monitor gpu-monitor --help
+   docker-compose exec gpu-monitor python3 -m src --help
    ```
 
 ## 🔍 主要改進

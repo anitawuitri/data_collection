@@ -1,9 +1,12 @@
-"""業務服務套件
+"""核心服務模組
 
-實現核心業務邏輯和協調功能。
+提供數據收集、處理和分析等核心服務。
 """
 
-from .gpu_service import GPUService
-from .user_service import UserService
+from .data_collection_service import DataCollectionService
+from .data_processing_service import DataProcessingService
 
-__all__ = ['GPUService', 'UserService']
+__all__ = [
+    'DataCollectionService',
+    'DataProcessingService'
+]

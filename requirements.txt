@@ -9,4 +9,13 @@
 # 基本數據處理依賴（用於數據收集腳本）
 pandas>=1.3.0
 
+# 環境變數載入
+python-dotenv>=1.0.0
+
+# HTTP 客戶端 (async)
+aiohttp>=3.8.0
+
+# CLI 框架
+click>=8.1.0
+
 # 視覺化依賴請參考 visualization/requirements.txt

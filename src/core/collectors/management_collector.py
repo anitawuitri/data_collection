@@ -102,10 +102,9 @@ class ManagementCollector(BaseCollector):
         users = []
         gpu_user_mapping = {}
         
-        # 處理任務列表
-        tasks = task_data.get('data', [])
-        
-        for task in tasks:
+        # API 回應格式是以任務 ID 為鍵的字典
+        # 遍歷所有任務
+        for task_id, task in task_data.items():
             try:
                 user_info = self._extract_user_info(task)
                 if user_info:
@@ -134,24 +133,32 @@ class ManagementCollector(BaseCollector):
         """從任務數據中提取使用者資訊"""
         
         try:
-            # 基本使用者資訊
+            # 基本使用者資訊 (根據實際 API 格式)
             user_info = {
-                'username': task.get('user', {}).get('username', '未知'),
+                'username': task.get('username', '未知'),
                 'hostname': task.get('hostname', '未知'),
-                'task_type': task.get('type', '未知'),
-                'project_uuid': task.get('project_uuid', ''),
+                'task_type': task.get('task', {}).get('_type', '未知') if isinstance(task.get('task'), dict) else '未知',
+                'project_uuid': task.get('uuid', ''),
                 'start_time': task.get('start_time', ''),
-                'gpu_uuids': []
+                'gpu_uuids': [],
+                'task_uuid': task.get('task', {}).get('uuid', '') if isinstance(task.get('task'), dict) else ''
             }
             
-            # 提取 GPU UUID
-            gpu_config = task.get('gpuconfig', {})
-            if isinstance(gpu_config, dict):
-                gpu_uuids = gpu_config.get('gpus', [])
-                if isinstance(gpu_uuids, list):
-                    user_info['gpu_uuids'] = gpu_uuids
+            # 從 flavor 信息提取 GPU 數量和類型
+            flavor = task.get('flavor', {})
+            if isinstance(flavor, dict):
+                gpu_count = flavor.get('gpu', 0)
+                gpu_type = flavor.get('gpu_type', '')
+                user_info['gpu_count'] = gpu_count
+                user_info['gpu_type'] = gpu_type
             
-            return user_info if user_info['gpu_uuids'] else None
+            # 如果有 GPU 資源，創建假的 GPU UUID 列表 (因為 API 似乎沒有提供實際的 GPU UUID)
+            if user_info.get('gpu_count', 0) > 0:
+                # 使用任務 UUID + GPU 索引作為標識
+                task_uuid = user_info.get('task_uuid', user_info.get('project_uuid', 'unknown'))
+                user_info['gpu_uuids'] = [f"{task_uuid}_gpu_{i}" for i in range(user_info['gpu_count'])]
+            
+            return user_info if user_info.get('gpu_count', 0) > 0 else None
             
         except Exception as e:
             self.logger.warning(f"提取使用者資訊失敗: {e}")
@@ -216,12 +223,46 @@ class ManagementCollector(BaseCollector):
         if not isinstance(data, dict):
             return False
         
-        # 檢查是否有 data 欄位
-        if 'data' not in data:
+        # API 回應格式是以任務 ID 為鍵的字典
+        # 例如: {"671": {...}, "672": {...}}
+        # 檢查是否有至少一個數字鍵
+        if len(data) == 0:
+            return True  # 空回應也是有效的
+        
+        # 檢查第一個鍵是否可能是任務 ID (數字字串)
+        first_key = next(iter(data))
+        if not isinstance(first_key, str) or not first_key.isdigit():
             return False
         
-        # 檢查 data 是否為列表
-        if not isinstance(data['data'], list):
+        # 檢查值是否是字典格式
+        first_value = data[first_key]
+        if not isinstance(first_value, dict):
             return False
         
         return True
+
+    async def collect_user_tasks(self, target_date) -> Dict[str, Any]:
+        """收集指定日期的使用者任務資訊
+        
+        Args:
+            target_date: 目標日期 (date 對象)
+            
+        Returns:
+            使用者任務資訊字典
+        """
+        from datetime import datetime, timedelta
+        
+        # 構建時間範圍 (當天 00:00:00 到 23:59:59)
+        start_time = datetime.combine(target_date, datetime.min.time())
+        end_time = start_time + timedelta(days=1, seconds=-1)
+        
+        try:
+            result = await self.collect(start_time, end_time)
+            return result
+            
+        except Exception as e:
+            raise CollectionError(
+                f"使用者任務收集失敗: {str(e)}",
+                self.__class__.__name__,
+                f"date-{target_date}"
+            )
