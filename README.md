@@ -143,6 +143,20 @@ python3 python/test_gpu_collector.py
 - `scripts/calculate_gpu_range.sh`: 日期區間 GPU 使用率統計
 - `scripts/calculate_node_gpu_usage.sh`: 節點使用率分析
 
+### 🔥 使用者監控腳本 (run_user_monitor.sh)
+整合了數據收集、視覺化和使用者查詢功能的綜合工具。
+
+```bash
+# 顯示使用說明
+./run_user_monitor.sh help
+
+# 常用命令
+./run_user_monitor.sh collect [日期]           # 收集數據
+./run_user_monitor.sh quick <開始> <結束>       # 快速圖表
+./run_user_monitor.sh query-user <使用者> <日期> # 查詢使用者
+```
+
+
 ## ⚙️ 配置與安裝
 
 ### 系統需求
