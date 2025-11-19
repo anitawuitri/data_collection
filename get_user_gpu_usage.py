@@ -48,6 +48,12 @@ except ImportError:
 class UserGPUUsageQuery:
     """查詢使用者 GPU 使用率的工具類"""
     
+    # 新增：支援的欄位別名集合
+    USER_COL_ALIASES = ['user', '使用者', 'username', '使用者名稱']
+    GPU_COL_ALIASES = ['gpu', 'GPU編號', 'gpu_id', 'GPU']
+    GPU_USAGE_ALIASES = ['usage', '平均GPU使用率(%)', 'gpu_usage', 'GPU使用率', '平均GPU使用率']
+    VRAM_USAGE_ALIASES = ['vram_usage', '平均VRAM使用率(%)', 'vram', 'VRAM使用率', '平均VRAM使用率']
+
     def __init__(self, data_dir="./data", plots_dir="./plots"):
         self.data_dir = Path(data_dir)
         self.plots_dir = Path(plots_dir)
@@ -60,6 +66,84 @@ class UserGPUUsageQuery:
         if HAS_FONT_CONFIG:
             setup_chinese_font()
         
+        self._last_missing_user_column_warning_printed = False  # 避免重複刷屏
+
+    # 新增：欄位標準化工具
+    def _standardize_columns(self, row_or_df):
+        """將輸入的 dict 或 pandas.DataFrame 欄位標準化為統一命名。
+        回傳 (standardized_object, success_bool, meta_info)
+        meta_info: {'columns': [...], 'mapped': {...}, 'missing': [...]}"""
+        if HAS_PANDAS and 'pandas' in str(type(row_or_df)):
+            columns = list(row_or_df.columns)
+            mapped = {}
+            # 建立對應
+            def find_alias(aliases):
+                for a in aliases:
+                    if a in row_or_df.columns:
+                        return a
+                return None
+            user_col = find_alias(self.USER_COL_ALIASES)
+            gpu_col = find_alias(self.GPU_COL_ALIASES)
+            gpu_usage_col = find_alias(self.GPU_USAGE_ALIASES)
+            vram_usage_col = find_alias(self.VRAM_USAGE_ALIASES)
+            rename_map = {}
+            if gpu_col and gpu_col != 'gpu':
+                rename_map[gpu_col] = 'gpu'
+            if gpu_usage_col and gpu_usage_col != 'usage':
+                rename_map[gpu_usage_col] = 'usage'
+            if vram_usage_col and vram_usage_col != 'vram_usage':
+                rename_map[vram_usage_col] = 'vram_usage'
+            if user_col and user_col != 'user':
+                rename_map[user_col] = 'user'
+            std_df = row_or_df.rename(columns=rename_map)
+            missing = []
+            for logical, required in [('user','user'),('gpu','gpu'),('usage','usage'),('vram_usage','vram_usage')]:
+                if required not in std_df.columns:
+                    missing.append(required)
+            success = len(missing) == 0
+            return std_df, success, {'columns': columns, 'mapped': rename_map, 'missing': missing}
+        else:
+            # 單行 dict 或 list[dict]
+            if isinstance(row_or_df, dict):
+                rows = [row_or_df]
+                single = True
+            else:
+                rows = row_or_df
+                single = False
+            columns = set()
+            for r in rows:
+                for k in r.keys():
+                    columns.add(k)
+            columns = list(columns)
+            # 為每列找 alias
+            def find_alias_in_row(r, aliases):
+                for a in aliases:
+                    if a in r:
+                        return a
+                return None
+            normalized = []
+            mapped_global = {}
+            missing_any = set()
+            for r in rows:
+                gpu_key = find_alias_in_row(r, self.GPU_COL_ALIASES)
+                usage_key = find_alias_in_row(r, self.GPU_USAGE_ALIASES)
+                vram_key = find_alias_in_row(r, self.VRAM_USAGE_ALIASES)
+                user_key = find_alias_in_row(r, self.USER_COL_ALIASES)
+                new_r = {}
+                if gpu_key: new_r['gpu'] = r[gpu_key]; mapped_global[gpu_key] = 'gpu'
+                if usage_key: new_r['usage'] = r[usage_key]; mapped_global[usage_key] = 'usage'
+                if vram_key: new_r['vram_usage'] = r[vram_key]; mapped_global[vram_key] = 'vram_usage'
+                if user_key: new_r['user'] = r[user_key]; mapped_global[user_key] = 'user'
+                for required in ['gpu','usage','vram_usage','user']:
+                    if required not in new_r:
+                        missing_any.add(required)
+                # 保留原始欄位以便除錯
+                new_r['_original'] = r
+                normalized.append(new_r)
+            success = len(missing_any) == 0
+            meta = {'columns': columns, 'mapped': mapped_global, 'missing': list(missing_any)}
+            return (normalized[0] if single else normalized), success, meta
+
     def load_gpu_data_with_users_basic(self, csv_file):
         """使用基本 csv 模組載入 GPU 數據（不依賴 pandas）"""
         if not os.path.exists(csv_file):
@@ -70,22 +154,39 @@ class UserGPUUsageQuery:
             with open(csv_file, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    # 標準化欄位名稱
+                    # 標準化欄位名稱 (舊邏輯保留，但後續再統一標準化)
                     if 'GPU編號' in row:
                         standardized_row = {
-                            'gpu': row['GPU編號'],
-                            'usage': float(row['平均GPU使用率(%)']),
-                            'vram_usage': float(row['平均VRAM使用率(%)']),
-                            'user': row['使用者']
+                            'gpu': row.get('GPU編號'),
+                            'usage': self._safe_float(row.get('平均GPU使用率(%)')),
+                            'vram_usage': self._safe_float(row.get('平均VRAM使用率(%)')),
+                            'user': row.get('使用者')
                         }
                     else:
                         standardized_row = row
                     data.append(standardized_row)
-            return data
+            # 新增：再次通用標準化
+            data_std, success, meta = self._standardize_columns(data)
+            if not success and not self._last_missing_user_column_warning_printed:
+                print(f"⚠️  檔案 {csv_file} 缺少必要欄位: {meta['missing']} (實際欄位: {meta['columns']})")
+                if 'user' in meta['missing']:
+                    print("   ➜ 將把缺失使用者欄位視為 '未使用' 進行處理")
+                self._last_missing_user_column_warning_printed = True
+                # 填入預設
+                for r in data_std:
+                    if 'user' not in r:
+                        r['user'] = '未使用'
+                    if 'gpu' not in r:
+                        r['gpu'] = r['_original'].get('GPU編號', '未知')
+                    if 'usage' not in r:
+                        r['usage'] = self._safe_float(r['_original'].get('平均GPU使用率(%)', 0.0))
+                    if 'vram_usage' not in r:
+                        r['vram_usage'] = self._safe_float(r['_original'].get('平均VRAM使用率(%)', 0.0))
+            return data_std
         except Exception as e:
             print(f"載入檔案時發生錯誤 {csv_file}: {e}")
             return None
-    
+
     def load_gpu_data_with_users(self, csv_file):
         """載入包含使用者資訊的 GPU 數據"""
         if HAS_PANDAS:
@@ -100,21 +201,39 @@ class UserGPUUsageQuery:
             
         try:
             df = pd.read_csv(csv_file)
-            
-            # 檢查欄位名稱並標準化
-            if 'GPU編號' in df.columns:
-                df = df.rename(columns={
-                    'GPU編號': 'gpu',
-                    '平均GPU使用率(%)': 'usage',
-                    '平均VRAM使用率(%)': 'vram_usage',
-                    '使用者': 'user'
-                })
-            
-            return df
+            # 通用標準化
+            df_std, success, meta = self._standardize_columns(df)
+            if not success:
+                # 提示缺失欄位
+                print(f"⚠️  檔案 {csv_file} 缺少必要欄位: {meta['missing']} (實際欄位: {meta['columns']})")
+                if 'user' in meta['missing']:
+                    print("   ➜ 將把缺失使用者欄位視為 '未使用' 進行處理")
+                    # 補 user 欄位
+                    df_std['user'] = '未使用'
+                if 'gpu' not in df_std.columns:
+                    df_std['gpu'] = '未知'
+                if 'usage' not in df_std.columns:
+                    df_std['usage'] = 0.0
+                if 'vram_usage' not in df_std.columns:
+                    df_std['vram_usage'] = 0.0
+            # 轉換數值
+            for col in ['usage','vram_usage']:
+                if col in df_std.columns:
+                    df_std[col] = pd.to_numeric(df_std[col], errors='coerce').fillna(0.0)
+            return df_std
         except Exception as e:
             print(f"載入檔案時發生錯誤 {csv_file}: {e}")
             return None
-    
+
+    # 新增：安全 float 轉換
+    def _safe_float(self, v, default=0.0):
+        try:
+            if v is None or v == '':
+                return default
+            return float(v)
+        except Exception:
+            return default
+
     def get_date_range(self, start_date, end_date=None):
         """取得日期範圍"""
         start = datetime.strptime(start_date, '%Y-%m-%d')
@@ -151,39 +270,43 @@ class UserGPUUsageQuery:
         print(f"📅 日期範圍: {start_date} 至 {end_date if end_date else start_date}")
         print("=" * 60)
         
+        missing_user_field_days = []  # 記錄缺少 user 欄位的日期
         for node in self.nodes:
             for date in dates:
                 date_str = date.strftime('%Y-%m-%d')
-                daily_found = False
-                
                 avg_file = self.data_dir / node / date_str / f"average_{date_str}.csv"
                 data = self.load_gpu_data_with_users(avg_file)
-                
-                if data is not None:
-                    # 過濾該使用者的記錄 (處理 pandas DataFrame 或基本列表)
-                    if HAS_PANDAS and isinstance(data, pd.DataFrame):
-                        user_data = data[data['user'] == username]
-                        user_rows = user_data.to_dict('records')
-                    else:
-                        user_rows = [row for row in data if row['user'] == username]
-                    
-                    if user_rows:
-                        daily_found = True
-                        
-                        for row in user_rows:
-                            record = {
-                                'date': date_str,
-                                'node': node,
-                                'gpu': row['gpu'],
-                                'gpu_usage': float(row['usage']),
-                                'vram_usage': float(row['vram_usage']),
-                                'user': row['user']
-                            }
-                            user_records.append(record)
-            
-            if not daily_found:
-                print(f"📊 {date_str}: 未找到使用者 '{username}' 的 GPU 使用記錄")
-        
+                if data is None:
+                    continue
+                # 統一處理 pandas 或 list
+                if HAS_PANDAS and isinstance(data, pd.DataFrame):
+                    if 'user' not in data.columns:
+                        missing_user_field_days.append(date_str)
+                    user_rows = data[data.get('user') == username] if 'user' in data.columns else []
+                    user_rows = user_rows.to_dict('records') if hasattr(user_rows, 'to_dict') else []
+                else:
+                    if isinstance(data, list) and data and 'user' not in data[0]:
+                        missing_user_field_days.append(date_str)
+                        # 填補
+                        for r in data:
+                            r.setdefault('user', '未使用')
+                    user_rows = [row for row in data if row.get('user') == username]
+                for row in user_rows:
+                    record = {
+                        'date': date_str,
+                        'node': node,
+                        'gpu': row.get('gpu','未知'),
+                        'gpu_usage': self._safe_float(row.get('usage', 0.0)),
+                        'vram_usage': self._safe_float(row.get('vram_usage', 0.0)),
+                        'user': row.get('user','未使用')
+                    }
+                    user_records.append(record)
+        if missing_user_field_days:
+            unique_days = sorted(set(missing_user_field_days))
+            print(f"⚠️  下列日期的檔案缺少使用者欄位，已以 '未使用' 代替: {', '.join(unique_days)}")
+            print("   ➜ 若需使用者資訊，請重新生成該日期資料 (python/daily_gpu_log.py)")
+        if not user_records:
+            print(f"❌ 在指定日期範圍內未找到使用者 '{username}' 的任何記錄")
         return user_records
     
     def display_user_usage_summary(self, records):
@@ -322,33 +445,43 @@ class UserGPUUsageQuery:
         for node in self.nodes:
             avg_file = self.data_dir / node / date_str / f"average_{date_str}.csv"
             data = self.load_gpu_data_with_users(avg_file)
-            
-            if data is not None:
+            if data is None:
+                continue
+            if HAS_PANDAS and isinstance(data, pd.DataFrame):
+                if 'user' not in data.columns:
+                    if not self._last_missing_user_column_warning_printed:
+                        print(f"⚠️  {avg_file} 缺少使用者欄位，跳過使用者統計")
+                        self._last_missing_user_column_warning_printed = True
+                    continue
                 # 過濾活動使用者 (處理 pandas DataFrame 或基本列表)
-                if HAS_PANDAS and isinstance(data, pd.DataFrame):
-                    active_users = data[
-                        (data['user'] != '未使用') & 
-                        (~data['gpu'].str.contains('全部平均', na=False)) &
-                        (pd.to_numeric(data['usage'], errors='coerce') > 1)
-                    ]
-                    active_rows = active_users.to_dict('records')
-                else:
-                    active_rows = [
-                        row for row in data 
-                        if (row['user'] != '未使用' and 
-                            '全部平均' not in row['gpu'] and 
-                            float(row['usage']) > 1)
-                    ]
-                
-                for row in active_rows:
-                    username = row['user']
-                    all_users.add(username)
-                    user_details[username].append({
-                        'node': node,
-                        'gpu': row['gpu'],
-                        'gpu_usage': float(row['usage']),
-                        'vram_usage': float(row['vram_usage'])
-                    })
+                active_users = data[
+                    (data['user'] != '未使用') & 
+                    (~data['gpu'].str.contains('全部平均', na=False)) &
+                    (pd.to_numeric(data['usage'], errors='coerce') > 1)
+                ]
+                active_rows = active_users.to_dict('records')
+            else:
+                if isinstance(data, list) and data and 'user' not in data[0]:
+                    if not self._last_missing_user_column_warning_printed:
+                        print(f"⚠️  {avg_file} 缺少使用者欄位，跳過使用者統計")
+                        self._last_missing_user_column_warning_printed = True
+                    continue
+                active_rows = [
+                    row for row in data 
+                    if (row['user'] != '未使用' and 
+                        '全部平均' not in row['gpu'] and 
+                        float(row['usage']) > 1)
+                ]
+            
+            for row in active_rows:
+                username = row['user']
+                all_users.add(username)
+                user_details[username].append({
+                    'node': node,
+                    'gpu': row['gpu'],
+                    'gpu_usage': float(row['usage']),
+                    'vram_usage': float(row['vram_usage'])
+                })
         
         if not all_users:
             print("❌ 未找到任何活動使用者")

@@ -283,7 +283,6 @@ class VRAMMonitor:
         for i, node in enumerate(self.nodes):
             node_vram_used = []
             node_vram_percent = []
-            valid_dates = []
             
             for date in dates:
                 date_str = date.strftime('%Y-%m-%d')
@@ -314,20 +313,23 @@ class VRAMMonitor:
                         except Exception as e:
                             print(f"讀取 {csv_file} 時發生錯誤: {e}")
                 
+                # 即使沒有資料也要添加0值，這樣線就連起來了
                 if daily_vram_used and daily_vram_percent:
                     node_vram_used.append(np.mean(daily_vram_used))
                     node_vram_percent.append(np.mean(daily_vram_percent))
-                    valid_dates.append(date)
+                else:
+                    node_vram_used.append(0)  # 用0填充空值
+                    node_vram_percent.append(0)  # 用0填充空值
             
             if node_vram_used and node_vram_percent:
                 color = self.colors[i % len(self.colors)]
                 
-                # VRAM 使用量 (GB)
-                ax1.plot(valid_dates, node_vram_used, label=node, color=color, 
+                # VRAM 使用量 (GB) - 現在線會連起來因為沒有空值
+                ax1.plot(dates, node_vram_used, label=node, color=color, 
                         marker='o', linewidth=2.5, markersize=6)
                 
-                # VRAM 使用率 (%)
-                ax2.plot(valid_dates, node_vram_percent, label=node, color=color,
+                # VRAM 使用率 (%) - 現在線會連起來因為沒有空值
+                ax2.plot(dates, node_vram_percent, label=node, color=color,
                         marker='o', linewidth=2.5, markersize=6)
         
         # 設定圖表標題和標籤
@@ -627,20 +629,23 @@ class VRAMMonitor:
                 csv_file = os.path.join(self.data_dir, node, date_str, f"average_{date_str}.csv")
                 df = self.load_vram_data_with_users(csv_file)
                 
-                if df is not None:
+                if df is not None and not df.empty:
                     if gpu_id is not None:
                         # 特定 GPU
                         gpu_data = df[df['gpu_id'] == gpu_id]
                         if not gpu_data.empty:
                             node_data.append(gpu_data['vram_usage'].iloc[0])
                         else:
-                            node_data.append(0)
+                            node_data.append(0)  # 沒找到該GPU數據，用0填充
                     else:
                         # 所有 GPU 平均
                         avg_usage = df['vram_usage'].mean()
-                        node_data.append(avg_usage)
+                        if pd.isna(avg_usage):
+                            node_data.append(0)  # NaN也用0填充
+                        else:
+                            node_data.append(avg_usage)
                 else:
-                    node_data.append(0)
+                    node_data.append(0)  # 沒有資料就用0填充
             
             all_data.append(node_data)
         

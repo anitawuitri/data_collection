@@ -132,6 +132,8 @@ def quick_nodes_trend(start_date, end_date, data_dir="../data", plots_dir="../pl
             date_str = date.strftime('%Y-%m-%d')
             avg_file = os.path.join(data_dir, node, date_str, f"average_{date_str}.csv")
             
+            daily_avg = 0  # 預設為0，這樣線就會連起來
+            
             if os.path.exists(avg_file):
                 df = load_gpu_data_with_users(avg_file)
                 if df is not None:
@@ -140,8 +142,7 @@ def quick_nodes_trend(start_date, end_date, data_dir="../data", plots_dir="../pl
                     avg_usage = pd.to_numeric(gpu_data['usage'], errors='coerce').mean()
                     
                     if not np.isnan(avg_usage):
-                        node_data.append(avg_usage)
-                        node_dates.append(date)
+                        daily_avg = avg_usage
                         
                         # 收集使用者資訊（僅最後一天）
                         if show_users and date == dates[-1]:
@@ -153,9 +154,13 @@ def quick_nodes_trend(start_date, end_date, data_dir="../data", plots_dir="../pl
                             if users:
                                 unique_users = list(set(users))
                                 user_info_text.append(f"{node}: {', '.join(unique_users)}")
+            
+            # 總是添加數據點，即使是0也要添加
+            node_data.append(daily_avg)
+            node_dates.append(date)
         
         if node_data:
-            ax.plot(node_dates, node_data, 
+            ax.plot(dates, node_data,  # 使用完整的dates而不是node_dates
                    label=node, 
                    marker='o', 
                    linewidth=2.5, 
@@ -1075,6 +1080,8 @@ def quick_nodes_vram_stacked_utilization(start_date, end_date, data_dir="../data
                                 
                                 if len(vram_values) > 0:
                                     daily_avg = vram_values.mean()
+                                    if pd.isna(daily_avg):
+                                        daily_avg = 0  # NaN轉為0
                                 else:
                                     daily_avg = 0
                                 

@@ -1,39 +1,3 @@
-# AMD GPU 使用率監控與### ✨ 主要功能
-
-### 🖥️ 數據收集與監控
-
-- **多節點 GPU 監控** - 同時監控多個節點的 AMD GPU 使用率與 VRAM 使用量
-- **🔥 GPU 使用者追蹤** - 即時顯示哪些使用者正在使用哪些 GPU (新功能！)
-- **硬體對應系統** - 自動建立 GPU 硬體 ID 與 GPU 索引的對應表
-- **管理 API 整合** - 透過 JWT 認證連接管理系統獲取使用者任務資訊
-- **自動化數據收集** - 支援定時任務，每日自動收集 GPU 與 VRAM 使用率數據  
-- **詳細統計分析** - 計算平均使用率、生成摘要報告
-- **多種數據格式** - 支### 🔥 Python 版本數據收集器 (`python/daily_gpu_log.py`)
-
-**新增功能**: 基於原 shell 腳本開發的 Python 版本，提供相同功能但具有更好的錯誤處理和可擴展性。
-
-**主要優勢:**
-- **🔥 GPU 使用者追蹤** - 整合管理 API，自動顯示 GPU 使用者資訊
-- **硬體對應系統** - 自動建立 GPU Card ID 到 GPU Index 對應表
-- **增強報表格式** - CSV 檔案包含使用者欄位，摘要報告顯示詳細使用者任務資訊
-- **更好的錯誤處理** - 詳細的異常資訊和網路錯誤恢復
-- **數據驗證** - 使用 pandas 進行強大的數據驗證和處理
-- **物件導向設計** - 易於維護和擴展的程式架構
-- **穩定的網路請求** - 使用 requests 庫處理 HTTP 請求
-
-**新增 CSV 格式:**
-```csv
-GPU編號,平均GPU使用率(%),平均VRAM使用率(%),使用者
-GPU[0],0.00,0.14,未使用
-GPU[1],0.00,0.14,未使用
-GPU[3],18.17,82.27,nycubme
-```
-
-**使用者資訊來源:**
-- 透過管理 API (`http://192.168.10.100/api/v2/consumption/task`) 獲取
-- 自動對應 GPU UUID 到使用者名稱
-- 區分使用中和未使用的 GPU 圖表和文字摘要![License: WTFPL](https://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)](http://www.wtfpl.net/)
-
 # AMD GPU 使用率監控與視覺化工具
 
 [![License: WTFPL](https://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)](http://www.wtfpl.net/)
@@ -46,392 +10,83 @@ GPU[3],18.17,82.27,nycubme
 > - 📊 **使用者欄位報表** - CSV 檔案和摘要報告包含詳細使用者資訊
 > - 🔗 **管理 API 整合** - 透過 JWT 認證獲取使用者任務資訊
 > - 🏗️ **物件導向設計** - 模組化架構，易於維護和擴展
-> 
-> 👉 [立即體驗使用者追蹤功能](#🔥-gpu-使用者追蹤系統新功能) | [查看完整功能說明](#🔥-python-版本數據收集器新功能)
 
 完整的 AMD GPU 使用率監控與視覺化解決方案，支援多節點環境的 GPU 監控、數據收集、分析和視覺化。
 
 ## ✨ 主要功能
 
-### � 數據收集與監控
-
+### 🖥️ 數據收集與監控
 - **多節點 GPU 監控** - 同時監控多個節點的 AMD GPU 使用率與 VRAM 使用量
+- **🔥 GPU 使用者追蹤** - 即時顯示哪些使用者正在使用哪些 GPU
+- **硬體對應系統** - 自動建立 GPU 硬體 ID 與 GPU 索引的對應表
+- **管理 API 整合** - 透過 JWT 認證連接管理系統獲取使用者任務資訊
 - **自動化數據收集** - 支援定時任務，每日自動收集 GPU 與 VRAM 使用率數據  
 - **詳細統計分析** - 計算平均使用率、生成摘要報告
-- **多種數據格式** - 支援 CSV、SVG 圖表和文字摘要
 
 ### 📊 視覺化與分析
-
 - **多種圖表類型** - 節點對比、GPU趨勢、VRAM分析、熱力圖、時間序列分析
+- **🔥 堆疊區域圖** - 新增 GPU/VRAM 使用率堆疊圖，清楚展示各節點貢獻
 - **中文字體支援** - 自動配置中文字體，完美顯示中文標籤
 - **跨平台相容** - 支援 Linux、Windows、macOS
-- **一鍵式操作** - 提供便捷的執行腳本
 
 ### 🛠️ 工具與腳本
-
-- **🔥 Python 數據收集器** - 新增！功能完整的 Python 版本，提供更好的錯誤處理和擴展性
+- **🔥 Python 數據收集器** - 功能完整的 Python 版本，提供更好的錯誤處理和擴展性
 - **Shell 數據收集腳本** - 原始穩定的 Bash 版本數據收集工具
 - **日期區間分析** - 靈活的時間範圍分析功能
 - **節點對比分析** - 多節點效能比較工具
-- **報告生成** - 自動生成各種格式的分析報告
 
-### 🆕 新增功能亮點
+##  快速開始
 
-- **🔥 GPU 使用者追蹤系統** - 整合管理 API，即時顯示 GPU 使用者資訊
-- **硬體對應表** - 自動建立 GPU Card ID 到 GPU Index 的對應關係
-- **使用者欄位報表** - CSV 檔案和摘要報告現在包含使用者資訊
-- **雙版本支援** - Shell 版本（穩定可靠）+ Python 版本（進階功能）
-- **智慧錯誤處理** - Python 版本提供詳細的錯誤診斷和自動恢復
-- **數據驗證** - 使用 pandas 進行強大的數據完整性檢查
-- **模組化設計** - 物件導向架構，易於維護和功能擴展
-
-## � GPU 使用者追蹤系統（新功能！）
-
-### 📋 功能概述
-
-新的 GPU 使用者追蹤系統能夠：
-- **即時顯示 GPU 使用者** - 自動識別哪些使用者正在使用哪些 GPU
-- **硬體對應表** - 建立 GPU Card ID 到 GPU Index 的清晰對應關係
-- **詳細任務資訊** - 顯示使用者的任務類型、執行時間、專案資訊等
-- **增強報表格式** - CSV 檔案和摘要報告包含完整使用者資訊
-
-### 🎯 使用範例
-
-**查看即時 GPU 使用者狀態:**
-```bash
-# 收集今日數據（包含使用者資訊）
-./python/run_daily_gpu_log.sh
-
-# 查看 CSV 報表中的使用者欄位
-head -10 data/colab-gpu4/$(date +%Y-%m-%d)/average_$(date +%Y-%m-%d).csv
-```
-
-**範例輸出:**
-```csv
-GPU編號,平均GPU使用率(%),平均VRAM使用率(%),使用者
-GPU[0],0.00,0.14,未使用
-GPU[1],0.00,0.14,未使用
-GPU[2],20.28,83.38,未使用
-GPU[3],18.17,82.27,nycubme
-GPU[4],0.00,0.14,未使用
-GPU[5],0.00,0.14,未使用
-GPU[6],0.00,0.14,未使用
-GPU[7],0.00,0.14,未使用
-全部平均,4.81,20.81,所有使用者
-```
-
-**詳細使用者任務資訊:**
-```bash
-# 查看詳細摘要報告
-cat data/colab-gpu4/$(date +%Y-%m-%d)/summary_$(date +%Y-%m-%d).txt
-```
-
-**範例摘要輸出:**
-```
-GPU 使用者任務資訊:
---------------------------------------------------
-colab-gpu4 GPU 任務資訊:
-  GPU 25: nycubme
-    - GPU 型號: AMD Instinct MI300X
-    - GPU 記憶體: 196592 MB
-    - 任務類型: LAB
-    - 專案 UUID: pd6ce655
-    - 映像檔: myelintek/labu1f682d9:1750235191
-    - 開始時間: Mon, 14 Jul 2025 14:22:00 GMT
-    - 狀態: 執行中
-    - 使用時長: 86399.0 秒
-    - GPU UUID: APU-70cb99ce3e214bda
-```
-
-### 🛠️ 技術實現
-
-**API 端點**: `http://192.168.10.100/api/v2/consumption/task`
-**認證方式**: JWT Bearer Token  
-**數據流程**:
-1. 從管理 API 獲取 GPU 使用者任務資訊
-2. 解析 GPU UUID 與使用者名稱的對應關係
-3. 結合 GPU 硬體對應表，將 Card ID 映射到 GPU Index
-4. 在 CSV 報表和摘要報告中顯示使用者資訊
-
-### 🎁 快速體驗
-
-```bash
-# 測試使用者欄位功能
-python3 test_user_column.py
-
-# 立即開始使用
-./python/run_daily_gpu_log.sh
-```
-
-> 🆕 **最新更新**: 全新 Python 版本數據收集器已上線！提供更強大的功能和更好的使用體驗。
-
-### 🔥 Python 版本數據收集器（新功能！）
-
-**一鍵測試環境**：
+**1. 環境檢查與測試**
 ```bash
 # 檢查環境並測試所有功能
 python3 python/test_gpu_collector.py
 ```
 
-**立即開始使用**：
+**2. 立即開始收集數據**
 ```bash
-# 收集今天的 GPU 數據（推薦使用）
+# 收集今天的 GPU 數據（推薦使用 Python 版本）
+./python/run_daily_gpu_log.sh
+```
+
+**3. 生成視覺化圖表**
+```bash
+# 自動偵測數據並生成所有圖表
+./run_gpu_visualization.sh auto
+```
+
+## 📖 詳細使用說明
+
+### 1. 數據收集
+
+#### 🔥 Python 版本 (推薦)
+基於 Python 開發，提供更好的錯誤處理、數據驗證和 API 整合。
+
+```bash
+# 收集今天的數據
 ./python/run_daily_gpu_log.sh
 
 # 收集指定日期的數據
 ./python/run_daily_gpu_log.sh 2025-08-01
 
-# 顯示詳細說明
+# 查看說明
 ./python/run_daily_gpu_log.sh --help
 ```
 
-**為什麼選擇 Python 版本？**
-- ✅ **更智慧的錯誤處理** - 詳細的錯誤診斷和自動恢復
-- ✅ **數據完整性保證** - 使用 pandas 進行強大的數據驗證
-- ✅ **物件導向設計** - 易於維護和功能擴展
-- ✅ **完全相容** - 與原 Shell 版本輸出格式100%相容
+**輸出檔案:**
+- CSV 報表 (`average_YYYY-MM-DD.csv`): 包含 GPU/VRAM 使用率及使用者資訊。
+- 摘要報告 (`summary_YYYY-MM-DD.txt`): 包含詳細的使用者任務資訊。
 
-### 視覺化工具
-
-```bash
-# 自動偵測數據並生成所有圖表
-./run_gpu_visualization.sh auto
-
-# 快速生成指定日期範圍的圖表  
-./run_gpu_visualization.sh quick 2025-05-23 2025-05-26
-
-# 生成節點對比圖
-./run_gpu_visualization.sh nodes 2025-05-23 2025-05-26
-
-# 執行所有範例
-./run_gpu_visualization.sh examples
-```
-
-### 傳統 Shell 版本（備用）
+#### Shell 版本 (備用)
+原始的 Bash 腳本，功能穩定但擴展性較低。
 
 ```bash
-# Python 版本（推薦）- 更好的錯誤處理和擴展性
-./python/run_daily_gpu_log.sh              # 收集今天的數據
-./python/run_daily_gpu_log.sh 2025-08-01   # 收集指定日期的數據
-
-# 原始 Shell 版本（穩定可靠）
-./scripts/daily_gpu_log.sh                 # 收集今天的數據
-./scripts/daily_gpu_log.sh 2025-08-01      # 收集指定日期的數據
+./scripts/daily_gpu_log.sh [日期]
 ```
 
-#### 其他分析工具
+### 2. 視覺化工具
 
-```bash
-# 分析日期區間的使用率
-./scripts/calculate_gpu_range.sh 2025-05-01 2025-05-15
-
-# 分析節點使用率（支援 GPU 和 VRAM）
-./scripts/calculate_node_gpu_usage.sh 2025-05-01 2025-05-15
-
-# 分析特定節點
-./scripts/calculate_node_gpu_usage.sh 2025-05-01 2025-05-15 colab-gpu1
-```
-
-## � 快速開始
-
-> 🆕 **最新更新**: 全新 GPU 使用者追蹤系統已上線！立即查看哪些使用者正在使用哪些 GPU。
-
-### 🔥 Python 版本數據收集器（新功能！）
-
-**🎯 快速體驗使用者追蹤功能**：
-```bash
-# 測試使用者欄位功能
-python3 test_user_column.py
-
-# 收集包含使用者資訊的數據
-./python/run_daily_gpu_log.sh
-
-# 查看使用者資訊（CSV 格式）
-head -10 data/colab-gpu4/$(date +%Y-%m-%d)/average_$(date +%Y-%m-%d).csv
-
-# 查看詳細使用者任務資訊
-cat data/colab-gpu4/$(date +%Y-%m-%d)/summary_$(date +%Y-%m-%d).txt
-```
-
-**一鍵測試環境**：
-```bash
-# 檢查環境並測試所有功能
-python3 python/test_gpu_collector.py
-```
-
-**立即開始使用**：
-```bash
-# 收集今天的 GPU 數據（推薦使用）
-./python/run_daily_gpu_log.sh
-
-# 收集指定日期的數據
-./python/run_daily_gpu_log.sh 2025-08-01
-
-# 顯示詳細說明
-./python/run_daily_gpu_log.sh --help
-```
-
-**為什麼選擇 Python 版本？**
-- ✅ **🔥 GPU 使用者追蹤** - 即時顯示 GPU 使用者資訊
-- ✅ **硬體對應表** - 自動建立 Card ID 到 GPU Index 對應
-- ✅ **使用者欄位報表** - CSV 和摘要包含完整使用者資訊
-- ✅ **更智慧的錯誤處理** - 詳細的錯誤診斷和自動恢復
-- ✅ **數據完整性保證** - 使用 pandas 進行強大的數據驗證
-- ✅ **物件導向設計** - 易於維護和功能擴展
-- ✅ **完全相容** - 與原 Shell 版本輸出格式100%相容
-
-### 視覺化工具
-
-```bash
-# 自動偵測數據並生成所有圖表
-./run_gpu_visualization.sh auto
-
-# 快速生成指定日期範圍的圖表  
-./run_gpu_visualization.sh quick 2025-05-23 2025-05-26
-
-# 生成節點對比圖
-./run_gpu_visualization.sh nodes 2025-05-23 2025-05-26
-
-# 執行所有範例
-./run_gpu_visualization.sh examples
-```
-
-### 傳統 Shell 版本（備用）
-
-```bash
-# Python 版本（推薦）- 更好的錯誤處理和擴展性
-./python/run_daily_gpu_log.sh              # 收集今天的數據
-./python/run_daily_gpu_log.sh 2025-08-01   # 收集指定日期的數據
-
-# 原始 Shell 版本（穩定可靠）
-./scripts/daily_gpu_log.sh                 # 收集今天的數據
-./scripts/daily_gpu_log.sh 2025-08-01      # 收集指定日期的數據
-```
-
-#### 其他分析工具
-
-```bash
-# 分析日期區間的使用率
-./scripts/calculate_gpu_range.sh 2025-05-01 2025-05-15
-
-# 分析節點使用率（支援 GPU 和 VRAM）
-./scripts/calculate_node_gpu_usage.sh 2025-05-01 2025-05-15
-
-# 分析特定節點
-./scripts/calculate_node_gpu_usage.sh 2025-05-01 2025-05-15 colab-gpu1
-```
-
-## �📁 專案結構
-
-```text
-data_collection/
-├── README.md                           # 專案說明文件
-├── GPU_TREND_VISUALIZATION_GUIDE.md   # GPU 趨勢視覺化指南
-├── VISUALIZATION_QUICK_START.md       # 視覺化快速入門
-├── VRAM_FEATURES.md                   # VRAM 功能說明
-├── LICENSE                            # 開源授權
-├── run_gpu_visualization.sh           # 主要視覺化執行腳本
-├── requirements.txt                   # Python 依賴套件
-├── .gitignore                         # Git 忽略規則
-├── plots/                             # 生成的圖表輸出目錄
-│   ├── *.png                         # 各種視覺化圖表
-│   └── font_test*.png                # 字體測試圖表
-├── data/                              # GPU 監控數據目錄 (git 忽略)
-│   ├── colab-gpu1/                   # 各節點數據
-│   │   ├── 2025-05-23/              # 依日期存放
-│   │   │   ├── average_*.csv        # 平均使用率
-│   │   │   ├── gpu*_*.csv          # 各 GPU 數據 (含 GPU 與 VRAM 使用率)
-│   │   │   ├── gpu*_*.svg          # GPU 圖表
-│   │   │   └── summary_*.txt       # 摘要報告
-│   │   └── ...
-│   ├── colab-gpu2/                   # 其他節點數據
-│   ├── colab-gpu3/
-│   ├── colab-gpu4/
-│   └── reports/                      # 綜合分析報告
-├── scripts/                          # 數據收集與分析腳本
-│   ├── daily_gpu_log.sh             # 主要數據收集腳本 (Shell 版本)
-│   ├── calculate_gpu_range.sh       # GPU 日期區間分析
-│   └── calculate_node_gpu_usage.sh  # 節點使用率分析
-├── python/                           # 🔥 Python 版本數據收集器
-│   ├── daily_gpu_log.py             # Python 版本數據收集腳本
-│   ├── run_daily_gpu_log.sh         # Python 版本執行腳本
-│   ├── test_gpu_collector.py        # 測試腳本
-│   ├── requirements.txt             # Python 依賴套件
-│   ├── README.md                    # Python 版本說明
-│   └── COMPARISON.md                # Shell vs Python 比較
-├── examples/                         # 範例檔案
-│   └── gpu_visualization_examples.py # GPU 視覺化範例
-└── visualization/                    # Python 視覺化工具集
-    ├── README.md                    # 視覺化工具說明
-    ├── GPU_TREND_VISUALIZATION_GUIDE.md # 詳細使用指南
-    ├── requirements.txt             # 視覺化依賴套件
-    ├── run_viz.sh                   # 視覺化執行腳本
-    ├── font_config.py               # 中文字體配置模組
-    ├── test_fonts.py                # 字體測試工具
-    ├── vram_monitor.py              # VRAM 監控工具
-    ├── advanced_gpu_trend_analyzer.py # 進階趨勢分析器
-    ├── quick_gpu_trend_plots.py     # 快速趨勢繪圖
-    ├── gpu_trend_visualizer.py      # GPU 趨勢視覺化器
-    └── gpu_trend_examples.py        # 使用範例與教學
-```
-
-## 🖥️ 節點配置
-
-目前配置監控以下節點：
-
-- **colab-gpu1**: 192.168.10.103
-- **colab-gpu2**: 192.168.10.104  
-- **colab-gpu3**: 192.168.10.105
-- **colab-gpu4**: 192.168.10.106
-
-每個節點監控 8 個 GPU ID: `1, 9, 17, 25, 33, 41, 49, 57`
-
-### 🔥 GPU 硬體對應表
-
-系統自動建立以下對應關係：
-
-| GPU Index | Card ID | 說明 |
-|-----------|---------|------|
-| GPU[0] | Card 1 | 第一張 GPU |
-| GPU[1] | Card 9 | 第二張 GPU |
-| GPU[2] | Card 17 | 第三張 GPU |
-| GPU[3] | Card 25 | 第四張 GPU |
-| GPU[4] | Card 33 | 第五張 GPU |
-| GPU[5] | Card 41 | 第六張 GPU |
-| GPU[6] | Card 49 | 第七張 GPU |
-| GPU[7] | Card 57 | 第八張 GPU |
-
-### 🔗 管理 API 整合
-
-- **管理系統端點**: `http://192.168.10.100/api/v2/consumption/task`
-- **認證方式**: JWT Bearer Token
-- **功能**: 獲取 GPU 使用者任務資訊，包含使用者名稱、任務類型、GPU UUID 等
-
-## 📊 視覺化功能詳述
-
-### 可用的圖表類型
-
-#### 🔥 GPU 使用率監控
-
-1. **節點對比趨勢圖** - 比較各節點的平均 GPU 使用率
-2. **單一節點所有 GPU 趨勢圖** - 查看特定節點內所有 GPU 的使用率趨勢
-3. **特定 GPU 跨節點對比圖** - 比較相同 GPU ID 在不同節點上的使用率
-4. **🔥 各節點 GPU 使用率堆疊區域圖** - 按節點分層顯示使用率累積情況，清楚展示各節點的貢獻（新功能）
-5. **熱力圖** - 以熱力圖形式顯示所有 GPU 的使用率分佈
-6. **詳細時間序列圖** - 顯示特定 GPU 在特定日期的詳細使用率變化
-7. **綜合儀表板** - 包含多種視圖的綜合分析頁面
-
-#### 🔥 VRAM 使用量監控
-
-1. **VRAM 節點對比圖** - 比較各節點的 VRAM 使用量趨勢
-2. **🔥 各節點 VRAM 使用率堆疊區域圖** - 顯示各節點 VRAM 使用率累積情況，包含使用者標籤資訊（新功能）
-3. **VRAM 使用率熱力圖** - 以熱力圖顯示所有 GPU 的 VRAM 使用分佈
-4. **VRAM 時間序列圖** - 顯示特定 GPU 的 VRAM 使用量變化曲線
-5. **VRAM 綜合分析** - 一次生成所有 VRAM 相關圖表
-
-### 主要執行腳本命令
-
-#### GPU 使用率圖表
+使用 `run_gpu_visualization.sh` 腳本生成各種圖表。
 
 ```bash
 # 自動模式 - 偵測數據並生成所有圖表
@@ -440,826 +95,129 @@ data_collection/
 # 快速模式 - 生成常用圖表
 ./run_gpu_visualization.sh quick [開始日期] [結束日期]
 
-# 節點對比圖
-./run_gpu_visualization.sh nodes [開始日期] [結束日期]
-
-# 單一節點所有 GPU 圖
-./run_gpu_visualization.sh node [節點名稱] [開始日期] [結束日期]
-
-# 特定 GPU 跨節點對比圖
-./run_gpu_visualization.sh gpu [GPU_ID] [開始日期] [結束日期]
-
 # 🔥 各節點 GPU 使用率堆疊區域圖（新功能）
 ./run_gpu_visualization.sh stacked [開始日期] [結束日期]
 
-# 熱力圖
-./run_gpu_visualization.sh heatmap [開始日期] [結束日期]
-
-# 詳細時間序列圖
-./run_gpu_visualization.sh timeline [節點] [GPU_ID] [日期]
-```
-
-#### 🔥 VRAM 使用量圖表
-
-```bash
 # 🔥 各節點 VRAM 使用率堆疊區域圖（新功能）
 ./run_gpu_visualization.sh vram-stacked [開始日期] [結束日期]
 
-# VRAM 各節點對比圖
-./run_gpu_visualization.sh vram-nodes [開始日期] [結束日期] [GPU_ID]
+# 節點對比圖
+./run_gpu_visualization.sh nodes [開始日期] [結束日期]
 
-# VRAM 使用率熱力圖
-./run_gpu_visualization.sh vram-heatmap [開始日期] [結束日期]
-
-# VRAM 時間序列圖
-./run_gpu_visualization.sh vram-timeline [節點] [GPU_ID] [日期]
-
-# 生成所有 VRAM 圖表
-./run_gpu_visualization.sh vram-all [開始日期] [結束日期]
-```
+# 熱力圖
+./run_gpu_visualization.sh heatmap [開始日期] [結束日期]
 
 # 執行所有範例
 ./run_gpu_visualization.sh examples
 ```
 
-### 中文字體支援
+### 3. 分析工具
 
-系統會自動偵測並配置最佳的中文字體：
-
-- **Ubuntu/Debian**: Noto Sans CJK TC/SC/JP
-- **Windows**: Microsoft YaHei
-- **macOS**: PingFang SC
-- **備用字體**: DejaVu Sans, Arial Unicode MS
-
-如果遇到字體顯示問題，可執行字體測試：
+#### 🔥 Colab-GPU 專用統計工具
+專為 colab-gpu 1-4 節點設計的綜合分析工具。
 
 ```bash
-cd visualization
-python3 test_fonts.py
+# 簡潔總平均摘要（自動最新日期）
+./colab_gpu_stats.sh
+
+# 詳細分析（包含IP、活躍GPU等）
+./colab_gpu_stats.sh detailed [日期]
+
+# 🔥 各使用者平均 GPU 使用率
+./colab_gpu_stats.sh user [日期]
+
+# 趨勢分析
+./colab_gpu_stats.sh trend [開始日期] [結束日期]
 ```
 
-## � 數據收集腳本詳述
-
-### 主要腳本功能
-
-#### 1. `daily_gpu_log.sh` - 日常數據收集
-- **功能**: 從多個節點收集 GPU 使用率和 VRAM 使用率數據
-- **輸出**: CSV 檔案（包含時間戳、GPU使用率、VRAM使用率）
-- **網路來源**: Netdata API (各節點的 19999 端口)
-- **監控項目**: 
-  - AMD GPU 使用率 (`amdgpu.gpu_utilization`)
-  - VRAM 使用率 (`amdgpu.gpu_mem_vram_usage_perc`)
-
-#### 2. `calculate_gpu_range.sh` - 日期區間分析
-- **功能**: 分析指定日期區間內的 GPU 使用率統計
-- **輸出**: 平均使用率、最高/最低使用率、統計報告
-
-#### 3. `calculate_node_gpu_usage.sh` - 節點使用率分析
-- **功能**: 分析各節點的 GPU 和 VRAM 平均使用率
-- **特色**: 
-  - 支援 GPU 和 VRAM 雙重分析
-  - 強化的數值處理（避免科學記數法錯誤）
-  - 使用 `awk` 進行安全的數學運算
-- **輸出**: 
-  - CSV 報告檔案
-  - 文字摘要報告
-  - 各節點的詳細統計
-
-### 🔥 Python 版本數據收集器 (`python/daily_gpu_log.py`)
-
-**新增功能**: 基於原 shell 腳本開發的 Python 版本，提供相同功能但具有更好的錯誤處理和可擴展性。
-
-**主要優勢:**
-- **更好的錯誤處理**: 詳細的異常資訊和網路錯誤恢復
-- **數據驗證**: 使用 pandas 進行強大的數據驗證和處理
-- **物件導向設計**: 易於維護和擴展的程式架構
-- **穩定的網路請求**: 使用 requests 庫處理 HTTP 請求
-
-**用法:**
-
+#### 通用總平均工具
 ```bash
-# 使用執行腳本（推薦）
-./python/run_daily_gpu_log.sh [日期]
+# 最近一天的總平均
+./gpu_total_avg.sh
 
-# 直接使用 Python 腳本
-python3 python/daily_gpu_log.py [日期] [--data-dir 路徑]
+# 指定日期的總平均
+./gpu_total_avg.sh custom [日期]
 ```
 
-**輸出格式**: 與原 shell 腳本完全相容，包括相同的 CSV 結構和摘要報告。
+#### 其他腳本
+- `scripts/calculate_gpu_range.sh`: 日期區間 GPU 使用率統計
+- `scripts/calculate_node_gpu_usage.sh`: 節點使用率分析
 
-**詳細說明**: 請參閱 `python/README.md` 和 `python/COMPARISON.md`
+## ⚙️ 配置與安裝
 
-### 1. 數據收集與平均值計算 (`scripts/daily_gpu_log.sh`)
+### 系統需求
+- **Python**: 3.7+
+- **Python 套件**: `requests`, `pandas` (數據收集); `matplotlib`, `seaborn` (視覺化)
+- **Shell 工具**: `bash`, `curl`, `jq`, `awk`, `bc`
 
-此腳本會從多個節點收集所有 AMD GPU 的使用率數據，並計算每日平均值。
+### 安裝步驟
 
-**用法:**
+1. **克隆專案**
+   ```bash
+   git clone <repository-url>
+   cd data_collection
+   ```
 
-```bash
-./scripts/daily_gpu_log.sh [日期]
-```
+2. **安裝依賴**
+   ```bash
+   # 安裝數據收集器依賴
+   pip3 install -r python/requirements.txt
+   
+   # 安裝視覺化工具依賴
+   pip3 install -r visualization/requirements.txt
+   ```
 
-**參數:**
+3. **設定權限**
+   ```bash
+   chmod +x python/run_daily_gpu_log.sh
+   chmod +x run_gpu_visualization.sh
+   chmod +x scripts/*.sh
+   chmod +x *.sh
+   ```
 
-- `日期`: 可選，指定要收集的日期 (格式: YYYY-MM-DD)，如不指定則使用當天日期
+### 節點配置
+目前配置監控以下節點：
+- **colab-gpu1**: 192.168.10.103
+- **colab-gpu2**: 192.168.10.104
+- **colab-gpu3**: 192.168.10.105
+- **colab-gpu4**: 192.168.10.106
 
-**輸出:**
+每個節點監控 8 個 GPU ID: `1, 9, 17, 25, 33, 41, 49, 57`
 
-- 各節點的 SVG 格式 GPU 使用率圖表
-- 各節點的 CSV 格式 GPU 使用率數據
-- 各節點的每日 GPU 平均使用率摘要
+### 🔥 GPU 硬體對應表
+系統自動建立以下對應關係：
+| GPU Index | Card ID |
+|-----------|---------|
+| GPU[0] | Card 1 |
+| ... | ... |
+| GPU[7] | Card 57 |
 
-### 2. 日期區間 GPU 使用率統計 (`scripts/calculate_gpu_range.sh`)
-
-此腳本計算指定日期區間內，各 GPU 的平均使用率。
-
-**用法:**
-
-```bash
-./scripts/calculate_gpu_range.sh 開始日期 結束日期 [特定 GPU ID]
-```
-
-**參數:**
-
-- `開始日期`: 分析的起始日期 (格式: YYYY-MM-DD)
-- `結束日期`: 分析的結束日期 (格式: YYYY-MM-DD)
-- `特定 GPU ID`: 可選，指定要分析的 GPU ID（例如: 1, 9, 17...等）
-
-**輸出:**
-
-- 包含每個 GPU 平均使用率的摘要報表
-- 詳細的 CSV 格式統計數據
-
-### 3. 節點 GPU 使用率統計 (`scripts/calculate_node_gpu_usage.sh`)
-
-此腳本針對多節點環境，計算指定日期區間內每個節點的 GPU 平均使用率。
-
-**用法:**
-
-```bash
-./scripts/calculate_node_gpu_usage.sh 開始日期 結束日期 [節點名稱]
-```
-
-**參數:**
-
-- `開始日期`: 分析的起始日期 (格式: YYYY-MM-DD)
-- `結束日期`: 分析的結束日期 (格式: YYYY-MM-DD)
-- `節點名稱`: 可選，指定要分析的節點 (例如: colab-gpu1)
-
-**輸出:**
-
-- 各節點的平均 GPU 使用率統計
-- 各節點中每個 GPU 的平均使用率統計
-- 每日使用率統計
-- CSV 格式的詳細數據
-
-### 4. 輔助工具
-
-#### 字體測試工具 (`visualization/test_fonts.py`)
-- **功能**: 測試系統中可用的中文字體
-- **用法**: `cd visualization && python3 test_fonts.py`
-
-#### 範例與教學 (`visualization/gpu_trend_examples.py`)
-- **功能**: 提供完整的使用範例和教學
-- **用法**: `cd visualization && python3 gpu_trend_examples.py`
-
-## ⚙️ 系統需求與安裝
-
-### 🔥 Python 版本安裝（推薦）
-
-**系統需求:**
-- Python 3.7+
-- requests >= 2.25.0
-- pandas >= 1.3.0
-
-**快速安裝:**
-```bash
-# 1. 克隆專案
-git clone <repository-url>
-cd data_collection
-
-# 2. 安裝 Python 數據收集器依賴
-pip3 install -r python/requirements.txt
-
-# 3. 設定執行權限
-chmod +x python/run_daily_gpu_log.sh
-
-# 4. 測試 Python 版本（推薦）
-python3 python/test_gpu_collector.py
-
-# 5. 立即開始使用！
-./python/run_daily_gpu_log.sh
-```
-
-### 完整系統安裝
-
-**依賴項:**
-
-**🔥 Python 數據收集器:**
-- Python 3.7+
-- requests >= 2.25.0 
-- pandas >= 1.3.0
-
-**Shell 腳本（備用）:**
-- `bash`, `curl`, `jq`, `awk`, `bc`
-
-**Python 視覺化:**
-- 套件列表請參考 `visualization/requirements.txt`
-
-**完整安裝步驟:**
-```bash
-# 1. 克隆專案
-git clone <repository-url>
-cd data_collection
-
-# 2. 🔥 安裝 Python 數據收集器
-pip3 install -r python/requirements.txt
-
-# 3. 安裝視覺化工具依賴
-pip install -r visualization/requirements.txt
-
-# 4. 設定所有執行權限
-chmod +x run_gpu_visualization.sh
-chmod +x python/run_daily_gpu_log.sh
-chmod +x scripts/*.sh
-chmod +x visualization/run_viz.sh
-
-# 5. 測試系統
-python3 python/test_gpu_collector.py        # 測試數據收集器
-cd visualization && python3 test_fonts.py   # 測試字體配置
-```
-
-## ⏰ 定時任務配置
-
-系統可設定在每天晚上 23:45 自動執行數據收集：
+### ⏰ 定時任務 (Crontab)
+建議設定在每天晚上 23:45 自動執行：
 
 ```bash
-# 編輯 crontab
-crontab -e
-
-# 🔥 推薦使用 Python 版本（更穩定的錯誤處理）
 45 23 * * * /bin/bash /path/to/data_collection/python/run_daily_gpu_log.sh
-
-# 或者使用原始 Shell 版本
-45 23 * * * /bin/bash /path/to/data_collection/scripts/daily_gpu_log.sh
 ```
 
-## 📝 使用範例
+## 📁 專案結構
 
-### 🔥 Python 版本完整使用流程（推薦）
-
-**第一次使用 - 環境檢查：**
-```bash
-# 檢查所有環境和功能
-python3 python/test_gpu_collector.py
-
-# 檢查特定功能
-python3 -c "
-import sys
-sys.path.append('python')
-from daily_gpu_log import GPUDataCollector
-collector = GPUDataCollector()
-print('Python 版本準備就緒！')
-print(f'監控節點: {list(collector.ip_name_map.values())}')
-print(f'GPU IDs: {collector.gpu_ids}')
-"
+```text
+data_collection/
+├── README.md                           # 專案說明文件
+├── run_gpu_visualization.sh           # 主要視覺化執行腳本
+├── colab_gpu_stats.sh                 # 🔥 Colab GPU 綜合統計工具
+├── gpu_total_avg.sh                   # 通用總平均工具
+├── python/                           # 🔥 Python 版本數據收集器
+│   ├── daily_gpu_log.py             # 核心收集腳本
+│   ├── run_daily_gpu_log.sh         # 執行腳本
+│   └── requirements.txt             # 依賴套件
+├── scripts/                          # Shell 版本腳本
+│   ├── daily_gpu_log.sh             # 核心收集腳本
+│   └── ...
+├── visualization/                    # Python 視覺化工具集
+│   ├── gpu_trend_visualizer.py      # 核心繪圖邏輯
+│   ├── run_viz.sh                   # 執行腳本
+│   └── ...
+├── data/                              # 數據目錄 (git 忽略)
+└── plots/                             # 圖表輸出目錄
 ```
-
-**日常使用：**
-```bash
-# 收集今天的數據（最常用）
-./python/run_daily_gpu_log.sh
-
-# 收集指定日期的數據
-./python/run_daily_gpu_log.sh 2025-08-01
-
-# 使用自訂數據目錄
-python3 python/daily_gpu_log.py --data-dir /custom/path
-
-# 檢查說明和所有選項
-./python/run_daily_gpu_log.sh --help
-```
-
-**進階使用：**
-```bash
-# 直接使用 Python API
-python3 -c "
-import sys
-sys.path.append('python')
-from daily_gpu_log import GPUDataCollector
-
-collector = GPUDataCollector()
-collector.collect_data('2025-08-01')  # 收集指定日期
-print('數據收集完成！')
-"
-```
-
-### 傳統 Shell 版本（備用）
-
-```bash
-# 收集今天的 GPU 使用率數據
-./scripts/daily_gpu_log.sh
-
-# 收集指定日期的數據
-./scripts/daily_gpu_log.sh 2025-08-01
-```
-
-### 🔄 版本比較和切換
-
-```bash
-# 同時使用兩個版本進行比較
-./scripts/daily_gpu_log.sh 2025-08-01    # Shell 版本
-./python/run_daily_gpu_log.sh 2025-08-01 # Python 版本
-
-# 比較輸出檔案（應該完全相同）
-diff data/colab-gpu1/2025-08-01/average_2025-08-01.csv
-```
-
-### 統計特定日期範圍的節點使用率
-
-```bash
-./scripts/calculate_node_gpu_usage.sh 2025-05-01 2025-05-15
-```
-
-### 分析特定節點的 GPU 使用率
-
-```bash
-./scripts/calculate_node_gpu_usage.sh 2025-05-01 2025-05-15 colab-gpu1
-```
-
-### 查看特定 GPU 的使用率統計
-
-```bash
-./scripts/calculate_gpu_range.sh 2025-05-01 2025-05-15 1
-```
-
-### 生成視覺化圖表
-
-```bash
-# 快速生成所有常用圖表
-./run_gpu_visualization.sh quick 2025-05-23 2025-05-26
-
-# 生成特定類型圖表
-./run_gpu_visualization.sh heatmap 2025-05-23 2025-05-26
-./run_gpu_visualization.sh nodes 2025-05-23 2025-05-26
-```
-
-### 將日期時間轉換為時間戳記
-
-```bash
-./scripts/test/time_convert.sh date2ts "2025-05-27 00:00:00" Asia/Taipei
-```
-
-## � Shell vs Python 版本功能比較
-
-| 功能特性 | Shell 版本 | 🔥 Python 版本 | 優勢說明 |
-|----------|------------|-----------------|----------|
-| **基本數據收集** | ✅ | ✅ | 完全相同的功能 |
-| **輸出格式** | ✅ | ✅ | 100% 相容 |
-| **🔥 GPU 使用者追蹤** | ❌ | ✅ | 整合管理 API |
-| **硬體對應表** | ❌ | ✅ | Card ID 到 GPU Index |
-| **使用者欄位報表** | ❌ | ✅ | CSV 和摘要包含使用者 |
-| **執行速度** | ⚡ 快速 | 🟡 稍慢 | 差異微小（~5秒） |
-| **錯誤處理** | 🟡 基本 | 🔥 進階 | 詳細錯誤診斷 |
-| **網路穩定性** | 🟡 依賴curl | 🔥 智慧重試 | 自動錯誤恢復 |
-| **數據驗證** | ⚠️ 有限 | 🔥 強大 | pandas 數據檢查 |
-| **程式碼品質** | 🟡 中等 | 🔥 優秀 | 物件導向設計 |
-| **維護性** | 🟡 中等 | 🔥 優秀 | 模組化架構 |
-| **可擴展性** | ⚠️ 有限 | 🔥 優秀 | 易於添加新功能 |
-| **測試系統** | ❌ 無 | ✅ 完整 | 自動化測試 |
-| **文檔完整性** | 🟡 基本 | 🔥 詳細 | 完整的API文檔 |
-
-### 🚀 何時使用哪個版本？
-
-**立即使用 Python 版本，如果你：**
-- 🎯 需要更可靠的數據收集
-- � 想要 GPU 使用者追蹤功能
-- 📊 需要詳細的使用者任務資訊
-- 🗃️ 希望看到 GPU 硬體對應表
-- �🛠️ 計劃添加新功能或自定義
-- 📊 重視數據完整性和驗證
-- 🔧 熟悉 Python 開發
-
-**保留 Shell 版本，如果你：**
-- ⚡ 追求最快的執行速度
-- 💾 運行在資源極其有限的環境
-- 🔒 現有系統已穩定運行
-- 📦 希望最少的系統依賴
-- ❌ 不需要使用者追蹤功能
-
-**推薦策略：**
-1. **新用戶** → 直接使用 Python 版本（包含完整功能）
-2. **現有用戶** → 並行測試後逐步遷移
-3. **生產環境** → 先測試 Python 版本，確認穩定後切換
-4. **需要使用者追蹤** → 必須使用 Python 版本
-
-## �🎯 進階功能
-
-### 直接使用 Python 視覺化工具
-
-```bash
-cd visualization
-
-# 使用快速繪圖工具
-python3 quick_gpu_trend_plots.py
-
-# 使用進階分析器
-python3 advanced_gpu_trend_analyzer.py --start-date 2025-05-23 --end-date 2025-05-26 --mode all
-
-# 執行所有範例
-python3 gpu_trend_examples.py
-```
-
-### 自訂視覺化腳本
-
-可以基於 `visualization/` 目錄中的模組創建自訂的視覺化腳本。詳細說明請參考：
-
-- `visualization/README.md` - 視覺化工具說明
-- `visualization/GPU_TREND_VISUALIZATION_GUIDE.md` - 詳細使用指南
-- `VISUALIZATION_QUICK_START.md` - 快速指南
-
-## ⚠️ 注意事項
-
-- 這些腳本依賴於 Netdata 監控系統來收集 GPU 使用率數據
-- 確保各節點的 Netdata 服務正常運行並可透過網路存取
-- 若要調整 GPU 的採樣頻率，可修改 `daily_gpu_log.sh` 中的 `POINTS` 變數
-- 數據目錄 `data/` 已加入 `.gitignore`，不會被提交到版本控制
-- 圖表輸出目錄為 `plots/`，建議定期清理舊圖表
-
-## 🔧 故障排除
-
-### 常見問題
-
-#### 1. 數據收集問題
-- **錯誤**: `(standard_in) 1: syntax error`
-  - **原因**: 數據中包含科學記數法或無效數值
-  - **解決**: 已在 `calculate_node_gpu_usage.sh` 中使用 `awk` 替代 `bc` 進行數值處理
-
-- **錯誤**: `bad array subscript`
-  - **原因**: 陣列索引未正確定義
-  - **解決**: 已修正變數初始化順序
-
-#### 2. 視覺化問題
-- **中文字體顯示為方塊**
-  - **解決**: 執行 `cd visualization && python3 test_fonts.py` 檢查字體配置
-
-- **圖表生成失敗**
-  - **檢查**: 確認 Python 依賴已正確安裝
-  - **檢查**: 確認數據目錄結構正確
-
-#### 3. 網路連線問題
-- **無法收集數據**
-  - **檢查**: 各節點 Netdata 服務 (端口 19999) 是否正常運行
-  - **檢查**: 網路連線是否暢通
-
-### 日誌與偵錯
-
-數據收集過程中的詳細資訊會顯示在終端機中，包括：
-- 處理的節點和日期
-- 找到的 CSV 檔案
-- 計算的平均值
-- 任何警告或錯誤訊息
-
-## 📊 數據格式說明
-
-### CSV 檔案結構
-
-每個 GPU 的 CSV 檔案包含以下欄位：
-```csv
-時間戳,日期時間,GPU使用率(%),VRAM使用率(%)
-1716969600,"2025-05-28 00:00:00",1.23,45.67
-```
-
-**🔥 平均值 CSV 檔案結構 (包含使用者資訊):**
-```csv
-GPU編號,平均GPU使用率(%),平均VRAM使用率(%),使用者
-GPU[0],0.00,0.14,未使用
-GPU[1],0.00,0.14,未使用
-GPU[2],20.28,83.38,未使用
-GPU[3],18.17,82.27,nycubme
-GPU[4],0.00,0.14,未使用
-GPU[5],0.00,0.14,未使用
-GPU[6],0.00,0.14,未使用
-GPU[7],0.00,0.14,未使用
-全部平均,4.81,20.81,所有使用者
-```
-
-### 報告檔案結構
-
-節點分析報告包含：
-- **GPU 硬體對應表** - Card ID 到 GPU Index 的對應關係
-- **🔥 GPU 使用者任務資訊** - 詳細的使用者任務資訊，包含：
-  - 使用者名稱和 GPU UUID
-  - GPU 型號和記憶體容量
-  - 任務類型（LAB、WEBAPP 等）
-  - 專案 UUID 和映像檔資訊
-  - 任務開始時間和執行時長
-- **各節點的平均 GPU 使用率** - 包含使用者資訊
-- **各節點的平均 VRAM 使用率** - 區分使用中和未使用
-- **每個 GPU 的詳細統計** - 顯示對應的使用者
-- **每日使用率變化趨勢**
-
-**範例摘要報告格式:**
-```
-GPU 硬體對應表:
-GPU[0] -> Card 1
-GPU[1] -> Card 9
-...
-
-GPU 使用者任務資訊:
---------------------------------------------------
-colab-gpu4 GPU 任務資訊:
-  GPU 25: nycubme
-    - GPU 型號: AMD Instinct MI300X
-    - GPU 記憶體: 196592 MB
-    - 任務類型: LAB
-    - 專案 UUID: pd6ce655
-    - 映像檔: myelintek/labu1f682d9:1750235191
-    - 開始時間: Mon, 14 Jul 2025 14:22:00 GMT
-    - 狀態: 執行中
-    - 使用時長: 86399.0 秒
-    - GPU UUID: APU-70cb99ce3e214bda
-
-各 GPU 使用率與 VRAM 使用率:
-GPU[0]: GPU使用率 = 0.0%, VRAM使用率 = 0.14% (使用者: 未使用)
-GPU[3]: GPU使用率 = 18.17%, VRAM使用率 = 82.27% (使用者: nycubme)
-...
-```
-
-## 🚀 Python 版本未來發展計劃
-
-基於新的 Python 版本架構，我們計劃開發以下進階功能：
-
-### 第一階段 (已完成 ✅)
-- [x] **完整功能對等** - 與 Shell 版本完全相容
-- [x] **智慧錯誤處理** - 詳細的異常診斷和自動恢復
-- [x] **數據驗證系統** - 使用 pandas 進行數據完整性檢查
-- [x] **測試自動化** - 完整的測試覆蓋和環境驗證
-
-### 第二階段 (計劃中 🗓️)
-- [ ] **並行處理** - 同時從多個節點收集數據，提升效率
-- [ ] **配置檔案支援** - 外部 YAML/JSON 配置，無需修改程式碼
-- [ ] **資料庫整合** - 直接儲存到 SQLite/PostgreSQL
-- [ ] **即時監控模式** - 持續監控而非定時收集
-
-### 第三階段 (未來計劃 🔮)
-- [ ] **Web 管理介面** - 基於 Flask/FastAPI 的 Web GUI
-- [ ] **告警系統** - Email/Slack 通知異常情況
-- [ ] **REST API** - 提供標準 API 介面
-- [ ] **容器化部署** - Docker 支援和 Kubernetes 整合
-
-### 程式碼範例預覽
-
-**並行處理（計劃中）：**
-```python
-import concurrent.futures
-
-with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [executor.submit(self.process_gpu_data, ip, name, date) 
-               for ip, name in self.ip_name_map.items()]
-    results = [future.result() for future in futures]
-```
-
-**配置檔案支援（計劃中）：**
-```yaml
-# config.yaml
-nodes:
-  colab-gpu1: "192.168.10.103"
-  colab-gpu2: "192.168.10.104"
-  
-gpu_ids: [1, 9, 17, 25, 33, 41, 49, 57]
-collection_interval: 600  # 10 minutes
-output_formats: ["csv", "json", "parquet"]
-```
-
-**即時監控（計劃中）：**
-```python
-# 即時監控模式
-python3 python/daily_gpu_log.py --realtime --interval 60
-```
-
-**Web 介面（未來）：**
-```python
-# 啟動 Web 介面
-python3 python/web_interface.py
-# 存取 http://localhost:8080 查看即時狀態
-```
-
-### 🤝 參與開發
-
-有興趣參與 Python 版本開發？歡迎：
-
-1. **功能建議** - 在 Issues 中提出新功能想法
-2. **程式碼貢獻** - 實現上述計劃中的功能
-3. **測試回饋** - 回報使用問題和改進建議
-4. **文檔完善** - 改進使用說明和API文檔
-
-## 🤝 貢獻指南
-
-歡迎提交 Issue 和 Pull Request 來改善這個專案。
-
-### 開發環境設置
-
-#### 🔥 Python 版本開發環境
-
-```bash
-# 1. 克隆專案
-git clone <repository-url>
-cd data_collection
-
-# 2. 創建開發分支
-git checkout -b feature/your-feature-name
-
-# 3. 設置 Python 開發環境
-python3 -m venv dev_venv
-source dev_venv/bin/activate
-
-# 4. 安裝所有依賴
-pip install -r python/requirements.txt        # Python 數據收集器
-pip install -r visualization/requirements.txt # 視覺化工具
-
-# 5. 執行完整測試
-python3 python/test_gpu_collector.py
-
-# 6. 開發和測試新功能
-# ... 您的開發工作 ...
-
-# 7. 提交更改
-git add .
-git commit -m "Add: 描述您的更改"
-git push origin feature/your-feature-name
-```
-
-#### 傳統開發環境
-
-```bash
-# 1. 克隆專案
-git clone <repository-url>
-cd data_collection
-
-# 2. 創建開發分支
-git checkout -b feature/your-feature-name
-
-# 3. 安裝傳統依賴
-pip install -r visualization/requirements.txt
-
-# 4. 進行開發和測試
-# ... 您的開發工作 ...
-
-# 5. 提交更改
-git add .
-git commit -m "描述您的更改"
-git push origin feature/your-feature-name
-```
-
-#### Python 版本開發指南
-
-**程式碼風格：**
-- 遵循 PEP 8 標準
-- 使用型別提示（Type Hints）
-- 完整的 docstring 文檔
-
-**測試要求：**
-- 新功能必須包含測試
-- 運行 `python3 python/test_gpu_collector.py` 確保通過
-- 測試與現有 Shell 版本的相容性
-
-**程式碼範例：**
-```python
-def new_feature(self, param: str) -> bool:
-    """
-    新功能的簡短描述
-    
-    Args:
-        param (str): 參數說明
-        
-    Returns:
-        bool: 回傳值說明
-        
-    Raises:
-        ValueError: 異常情況說明
-    """
-    try:
-        # 實現邏輯
-        return True
-    except Exception as e:
-        print(f"錯誤: {e}")
-        return False
-```
-
-## 📄 授權協議
-
-本專案採用 WTFPL (Do What The F*ck You Want To Public License) 授權。
-
-詳細條款請參閱 [LICENSE](LICENSE) 檔案。
-
-### 🔧 故障排除
-
-#### 🔥 Python 版本常見問題
-
-**1. 環境檢查失敗**
-```bash
-# 問題：python3 python/test_gpu_collector.py 失敗
-# 解決：
-pip3 install -r python/requirements.txt
-python3 --version  # 確認版本 >= 3.7
-```
-
-**2. 模組匯入錯誤**
-```bash
-# 問題：ModuleNotFoundError: No module named 'pandas'
-# 解決：
-pip3 install pandas requests
-# 或者使用虛擬環境：
-python3 -m venv .venv && source .venv/bin/activate && pip install -r python/requirements.txt
-```
-
-**3. 使用者追蹤功能問題**
-```bash
-# 問題：CSV 檔案中使用者欄位顯示為空或錯誤
-# 解決：
-# 1. 檢查管理 API 連線
-curl -H "Authorization: Bearer YOUR_TOKEN" http://192.168.10.100/api/v2/consumption/task
-
-# 2. 測試使用者欄位功能
-python3 test_user_column.py
-
-# 3. 檢查 Bearer Token 設定
-# 確認 daily_gpu_log.py 中的 JWT token 是否正確
-```
-
-**4. GPU 硬體對應表問題**
-```bash
-# 問題：GPU Index 對應錯誤
-# 解決：
-# 檢查摘要報告中的硬體對應表
-cat data/colab-gpu4/$(date +%Y-%m-%d)/summary_$(date +%Y-%m-%d).txt | grep "GPU\["
-
-# 確認對應關係：GPU[0] -> Card 1, GPU[1] -> Card 9, 等等
-```
-
-**5. 網路連線問題**
-```bash
-# 問題：錯誤：無法從 http://192.168.10.103:19999 獲取數據
-# 解決：
-ping 192.168.10.103  # 檢查網路連線
-curl http://192.168.10.103:19999/api/v1/info  # 檢查 Netdata API
-
-# 問題：管理 API 連線失敗
-# 解決：
-ping 192.168.10.100  # 檢查管理伺服器連線
-curl http://192.168.10.100/api/v2/consumption/task  # 檢查管理 API
-```
-
-**6. 權限問題**
-```bash
-# 問題：Permission denied: ./python/run_daily_gpu_log.sh
-# 解決：
-chmod +x python/run_daily_gpu_log.sh
-```
-
-**7. 數據格式問題**
-```bash
-# 問題：pandas 無法讀取 CSV 檔案
-# 解決：檢查生成的 CSV 檔案格式
-head -5 data/colab-gpu1/2025-08-01/gpu1_2025-08-01.csv
-
-# 確認平均值 CSV 包含使用者欄位
-head -5 data/colab-gpu1/2025-08-01/average_2025-08-01.csv
-# 應該包含：GPU編號,平均GPU使用率(%),平均VRAM使用率(%),使用者
-```
-
-#### 傳統 Shell 版本問題
-
-### 字體顯示問題
-
-如果圖表中的中文文字顯示為方塊或亂碼：
-
-```bash
-cd visualization
-python3 test_fonts.py
-```
-
-### 數據收集問題
-
-1. 檢查 Netdata 服務狀態
-2. 驗證節點網路連接
-3. 檢查腳本執行權限
-
-### Python 依賴問題
-
-```bash
-# 重新安裝依賴
-pip install -r visualization/requirements.txt
-
-# 檢查 Python 版本
-python3 --version
-```
-
-## 📄 License
-
-<a href="http://www.wtfpl.net/"><img
-       src="https://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-1.png"
-       width="88" height="31" alt="WTFPL" /></a>
-
-This project uses the WTFPL license (Do What The Fuck You Want To Public License)
