@@ -315,3 +315,43 @@ class NetdataCollector(BaseCollector):
                 self.__class__.__name__,
                 f"{node_config.name}-GPU{card_id}"
             )
+
+    async def collect_daily_gpu_data(self, node_config, date) -> Dict[str, Any]:
+        """收集指定節點指定日期的所有 GPU 數據
+        
+        簡化的日常收集方法，去掉不必要的複雜性。
+        
+        Args:
+            node_config: 節點配置
+            date: 收集日期 (date 對象)
+            
+        Returns:
+            包含所有 GPU 數據的字典
+        """        
+        results = {}
+        
+        for card_id, gpu_index in self.config.gpu.mapping.items():
+            try:
+                # 收集 GPU 使用率
+                gpu_data = await self.collect_gpu_utilization(node_config, card_id, date)
+                # 收集 VRAM 數據
+                vram_data = await self.collect_vram_usage(node_config, card_id, date)
+                
+                results[f'gpu{gpu_index}'] = {
+                    'card_id': card_id,
+                    'gpu_index': gpu_index,
+                    'utilization': gpu_data,
+                    'vram': vram_data
+                }
+                
+            except Exception as e:
+                logger.warning(f"收集 {node_config.name} GPU{gpu_index} 失敗: {e}")
+                results[f'gpu{gpu_index}'] = {
+                    'card_id': card_id,
+                    'gpu_index': gpu_index,
+                    'utilization': {'data': []},
+                    'vram': {'data': []},
+                    'error': str(e)
+                }
+        
+        return results

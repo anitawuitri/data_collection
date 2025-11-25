@@ -1,11 +1,15 @@
 """視覺化命令
 
-提供數據視覺化相關的 CLI 命令。
+提供 GPU 數據視覺化相關的 CLI 命令。
+簡化版本，去掉不必要的複雜功能。
 """
 
 import click
-from datetime import datetime
+from datetime import datetime, date, timedelta
+from pathlib import Path
 from typing import Optional
+
+from ...visualization.main import SimpleVisualizer
 
 
 @click.group()
@@ -14,218 +18,101 @@ def visualize_command():
     pass
 
 
-@visualize_command.command('trends')
-@click.argument('start_date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.argument('end_date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.option('--nodes', multiple=True, help='指定節點，可多選')
-@click.option('--gpus', multiple=True, type=int, help='指定 GPU 索引，可多選')
-@click.option('--users', multiple=True, help='指定使用者，可多選')
-@click.option('--type', 'chart_type', type=click.Choice(['line', 'bar', 'heatmap']), 
-              default='line', help='圖表類型')
-@click.option('--output', '-o', help='輸出文件名')
-@click.option('--show-users', is_flag=True, help='顯示使用者資訊')
-@click.pass_context
-def visualize_trends(ctx, start_date: datetime, end_date: datetime,
-                     nodes: tuple, gpus: tuple, users: tuple,
-                     chart_type: str, output: Optional[str], show_users: bool):
-    """生成 GPU 使用趨勢圖
-    
-    生成指定時間範圍內的 GPU 使用率和 VRAM 使用率趨勢圖。
-    
-    範例：
-      gpu-monitor visualize trends 2025-09-01 2025-09-15
-      gpu-monitor visualize trends 2025-09-15 2025-09-15 --nodes colab-gpu1
-      gpu-monitor visualize trends 2025-09-01 2025-09-15 --type heatmap --show-users
-      gpu-monitor visualize trends 2025-09-15 2025-09-15 --users paslab_openai
-    """
-    config = ctx.obj.get('config')
-    if not config:
-        click.echo("❌ 配置未載入", err=True)
-        return
-    
-    # 設定日期範圍
-    start = start_date.date()
-    end = end_date.date()
-    
-    if start > end:
-        click.echo("❌ 開始日期不能晚於結束日期", err=True)
-        return
-    
-    days = (end - start).days + 1
-    click.echo(f"📊 生成 GPU 使用趨勢圖")
-    click.echo(f"📅 日期範圍: {start} 至 {end} (共 {days} 天)")
-    click.echo(f"📈 圖表類型: {chart_type}")
-    
-    # 篩選條件
-    if nodes:
-        click.echo(f"🖥️  節點篩選: {', '.join(nodes)}")
-    
-    if gpus:
-        click.echo(f"🎮 GPU 篩選: {', '.join(f'GPU[{gpu}]' for gpu in gpus)}")
-    
-    if users:
-        click.echo(f"👤 使用者篩選: {', '.join(users)}")
-    
-    if show_users:
-        click.echo("👥 顯示使用者資訊")
-    
-    # 設定輸出
-    if output:
-        output_path = config.plots_dir / output
-        click.echo(f"💾 輸出文件: {output_path}")
-    else:
-        output_filename = f"trends_{start}_to_{end}.png"
-        output_path = config.plots_dir / output_filename
-        click.echo(f"💾 輸出文件: {output_path}")
-    
-    # TODO: 實現趨勢圖生成邏輯
-    click.echo("🚧 趨勢圖生成功能開發中...")
-
-
-@visualize_command.command('comparison')
-@click.argument('start_date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.argument('end_date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.option('--type', 'comparison_type', 
-              type=click.Choice(['nodes', 'gpus', 'users', 'daily']),
-              default='nodes', help='比較類型')
-@click.option('--metric', type=click.Choice(['gpu', 'vram', 'both']),
-              default='both', help='指標類型')
-@click.option('--output', '-o', help='輸出文件名')
-@click.pass_context
-def visualize_comparison(ctx, start_date: datetime, end_date: datetime,
-                         comparison_type: str, metric: str, output: Optional[str]):
-    """生成比較分析圖
-    
-    生成不同維度的比較分析圖表。
-    
-    範例：
-      gpu-monitor visualize comparison 2025-09-01 2025-09-15 --type nodes
-      gpu-monitor visualize comparison 2025-09-15 2025-09-15 --type users --metric gpu
-      gpu-monitor visualize comparison 2025-09-01 2025-09-15 --type daily
-    """
-    config = ctx.obj.get('config')
-    if not config:
-        click.echo("❌ 配置未載入", err=True)
-        return
-    
-    start = start_date.date()
-    end = end_date.date()
-    
-    click.echo(f"📊 生成比較分析圖")
-    click.echo(f"📅 日期範圍: {start} 至 {end}")
-    click.echo(f"🔍 比較類型: {comparison_type}")
-    click.echo(f"📏 指標類型: {metric}")
-    
-    # TODO: 實現比較圖生成邏輯
-    click.echo("🚧 比較圖生成功能開發中...")
-
-
-@visualize_command.command('heatmap')
-@click.argument('start_date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.argument('end_date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.option('--metric', type=click.Choice(['gpu', 'vram']), 
-              default='gpu', help='熱圖指標')
-@click.option('--show-users', is_flag=True, help='在熱圖中顯示使用者資訊')
-@click.option('--output', '-o', help='輸出文件名')
-@click.pass_context
-def visualize_heatmap(ctx, start_date: datetime, end_date: datetime,
-                      metric: str, show_users: bool, output: Optional[str]):
-    """生成使用率熱圖
-    
-    生成 GPU 使用率或 VRAM 使用率的熱圖。
-    
-    範例：
-      gpu-monitor visualize heatmap 2025-09-01 2025-09-15
-      gpu-monitor visualize heatmap 2025-09-01 2025-09-15 --metric vram
-      gpu-monitor visualize heatmap 2025-09-01 2025-09-15 --show-users
-    """
-    config = ctx.obj.get('config')
-    if not config:
-        click.echo("❌ 配置未載入", err=True)
-        return
-    
-    start = start_date.date()
-    end = end_date.date()
-    
-    click.echo(f"🔥 生成使用率熱圖")
-    click.echo(f"📅 日期範圍: {start} 至 {end}")
-    click.echo(f"📏 熱圖指標: {metric}")
-    
-    if show_users:
-        click.echo("👥 顯示使用者資訊")
-    
-    # TODO: 實現熱圖生成邏輯
-    click.echo("🚧 熱圖生成功能開發中...")
-
-
-@visualize_command.command('dashboard')
+@visualize_command.command('daily')
 @click.argument('date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.option('--output-dir', help='儀表板輸出目錄')
-@click.option('--format', 'output_format', 
-              type=click.Choice(['png', 'svg', 'pdf']),
-              default='png', help='輸出格式')
+@click.option('--nodes', help='指定節點，逗號分隔')
+@click.option('--data-dir', default='./data', help='數據目錄')
+@click.option('--output-dir', default='./plots', help='輸出目錄')
 @click.pass_context
-def visualize_dashboard(ctx, date: datetime, output_dir: Optional[str],
-                        output_format: str):
-    """生成完整的監控儀表板
+def visualize_daily(ctx, date: datetime, nodes: str, data_dir: str, output_dir: str):
+    """生成每日 GPU 視覺化圖表
     
-    生成包含所有關鍵指標的完整監控儀表板。
+    從收集的數據生成各種視覺化圖表。
     
     範例：
-      gpu-monitor visualize dashboard 2025-09-15
-      gpu-monitor visualize dashboard 2025-09-15 --format svg
-      gpu-monitor visualize dashboard 2025-09-15 --output-dir ./dashboard
+      python -m src visualize daily 2025-09-19
+      python -m src visualize daily 2025-09-19 --nodes colab-gpu1,colab-gpu2
     """
-    config = ctx.obj.get('config')
-    if not config:
-        click.echo("❌ 配置未載入", err=True)
-        return
+    date_str = date.date().isoformat()
     
-    target_date = date.date()
+    # 解析節點
+    target_nodes = None
+    if nodes:
+        target_nodes = [n.strip() for n in nodes.split(',')]
     
-    # 設定輸出目錄
-    if output_dir:
-        dashboard_dir = Path(output_dir)
-    else:
-        dashboard_dir = config.plots_dir / f"dashboard_{target_date}"
+    click.echo(f"� 生成 {date_str} 的視覺化圖表")
+    if target_nodes:
+        click.echo(f"🖥️  目標節點: {', '.join(target_nodes)}")
     
-    click.echo(f"📊 生成監控儀表板")
-    click.echo(f"📅 目標日期: {target_date}")
-    click.echo(f"🎨 輸出格式: {output_format}")
-    click.echo(f"📁 輸出目錄: {dashboard_dir}")
-    
-    # TODO: 實現儀表板生成邏輯
-    click.echo("🚧 儀表板生成功能開發中...")
+    try:
+        visualizer = SimpleVisualizer(data_dir, output_dir)
+        files = visualizer.generate_daily_plots(date_str, target_nodes)
+        
+        click.echo(f"✅ 生成完成! 共 {len(files)} 個圖表文件:")
+        for file_path in files:
+            click.echo(f"   📈 {Path(file_path).name}")
+            
+    except Exception as e:
+        click.echo(f"❌ 視覺化失敗: {e}", err=True)
+        if ctx.obj and ctx.obj.get('verbose'):
+            import traceback
+            click.echo(traceback.format_exc(), err=True)
 
 
-@visualize_command.command('quick')
-@click.argument('start_date', type=click.DateTime(formats=['%Y-%m-%d']))
-@click.argument('end_date', type=click.DateTime(formats=['%Y-%m-%d']), required=False)
-@click.option('--all-types', is_flag=True, help='生成所有類型的圖表')
-@click.pass_context
-def visualize_quick(ctx, start_date: datetime, end_date: Optional[datetime], all_types: bool):
-    """快速生成常用圖表
+@visualize_command.command('test-fonts')
+@click.option('--output-dir', default='./plots', help='輸出目錄')
+def visualize_test_fonts(output_dir: str):
+    """測試中文字體配置
     
-    快速生成最常用的 GPU 監控圖表。
-    
-    範例：
-      gpu-monitor visualize quick 2025-09-15
-      gpu-monitor visualize quick 2025-09-01 2025-09-15
-      gpu-monitor visualize quick 2025-09-15 --all-types
+    生成測試圖表以驗證中文字體是否正確顯示。
     """
-    config = ctx.obj.get('config')
-    if not config:
-        click.echo("❌ 配置未載入", err=True)
+    click.echo("🔤 測試中文字體配置...")
+    
+    try:
+        visualizer = SimpleVisualizer(output_dir=output_dir)
+        file_path = visualizer.test_fonts()
+        
+        click.echo(f"✅ 字體測試完成:")
+        click.echo(f"   � {Path(file_path).name}")
+        
+    except Exception as e:
+        click.echo(f"❌ 字體測試失敗: {e}", err=True)
+
+
+@visualize_command.command('auto')
+@click.option('--data-dir', default='./data', help='數據目錄')
+@click.option('--output-dir', default='./plots', help='輸出目錄')
+@click.option('--days', default=7, help='生成最近幾天的圖表')
+def visualize_auto(data_dir: str, output_dir: str, days: int):
+    """自動生成最近幾天的視覺化圖表
+    
+    自動掃描數據目錄並生成可用日期的圖表。
+    """
+    click.echo(f"🔍 自動掃描最近 {days} 天的數據...")
+    
+    data_path = Path(data_dir)
+    if not data_path.exists():
+        click.echo(f"❌ 數據目錄不存在: {data_dir}", err=True)
         return
     
-    start = start_date.date()
-    end = end_date.date() if end_date else start
+    visualizer = SimpleVisualizer(data_dir, output_dir)
+    generated_count = 0
     
-    click.echo(f"⚡ 快速生成常用圖表")
-    click.echo(f"📅 日期範圍: {start} 至 {end}")
+    # 檢查最近幾天的數據
+    for i in range(days):
+        target_date = date.today() - timedelta(days=i)
+        date_str = target_date.isoformat()
+        
+        # 檢查是否有該日期的數據
+        available_nodes = visualizer._discover_nodes(date_str)
+        
+        if available_nodes:
+            click.echo(f"📅 處理 {date_str} ({len(available_nodes)} 個節點)")
+            try:
+                files = visualizer.generate_daily_plots(date_str, available_nodes)
+                generated_count += len(files)
+                click.echo(f"   ✅ 生成 {len(files)} 個圖表")
+            except Exception as e:
+                click.echo(f"   ⚠️  生成失敗: {e}")
     
-    if all_types:
-        click.echo("🎨 生成所有類型圖表")
-    
-    # TODO: 實現快速圖表生成邏輯
-    click.echo("🚧 快速圖表功能開發中...")
+    click.echo(f"\n� 自動生成完成! 總共生成 {generated_count} 個圖表文件")

@@ -38,6 +38,19 @@ GPU[3],18.17,82.27,nycubme
 
 [![License: WTFPL](https://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)](http://www.wtfpl.net/)
 
+> 🚀 **重構完成 (2025-09-19)**: Linus 風格的程式碼重構大成功！
+> 
+> 🔥 **重構亮點**:
+> - **76% 程式碼減少** - 500行 Shell 腳本縮減為 120行簡潔包裝器
+> - **模組化 src/ 架構** - python/, visualization/ 文件夾整合到統一的 src/ 結構
+> - **高級視覺化工具** - 新的 `src/tools/advanced_visualizer.py` 替代複雜腳本
+> - **向後相容性** - 所有舊命令格式仍然有效，自動轉換
+> - **Linus 好品味** - 消除特殊情況，簡化資料結構，無條件分支
+> 
+> 📖 **詳細報告**: [Shell腳本重構完成報告](SHELL_SCRIPT_REFACTORING_COMPLETE.md)
+
+---
+
 > 🎉 **重大更新 (2025-08-01)**: GPU 使用者追蹤系統正式上線！
 > 
 > ✨ **新功能亮點**:
