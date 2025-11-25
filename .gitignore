@@ -1,6 +1,7 @@
 # 數據目錄
 data/
 plots/
+data_archive/
 
 # 日誌檔案
 *.log
@@ -53,3 +54,7 @@ Thumbs.db
 
 # 歷史備份檔案
 archive_*.zip
+
+# Generated Data Files
+*.csv
+summary_*.txt
