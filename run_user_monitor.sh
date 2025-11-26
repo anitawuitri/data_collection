@@ -2,10 +2,11 @@
 IMAGE_NAME="gpu-monitor"
 
 # Build image if not exists or if --build flag is passed
-if [[ "$1" == "--build" ]] || [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
+# Build image if not exists or if --build flag is passed
+if [ "$1" = "--build" ] || [ -z "$(docker images -q $IMAGE_NAME 2> /dev/null)" ]; then
     echo "Building Docker image..."
     docker build -t $IMAGE_NAME .
-    if [[ "$1" == "--build" ]]; then
+    if [ "$1" = "--build" ]; then
         shift # Remove --build from args
     fi
 fi
@@ -18,7 +19,8 @@ mkdir -p data plots data_archive
 # -e USER: Pass current username
 # -v: Mount data directories
 docker run --rm -it \
-    --user $(id -u):$(id -g) \
+    -e USER_ID=$(id -u) \
+    -e GROUP_ID=$(id -g) \
     -e USER=$(whoami) \
     -e MPLCONFIGDIR=/tmp/matplotlib_cache \
     -v "$(pwd)/data:/app/data" \
