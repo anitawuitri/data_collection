@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gosu \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Create user with a fixed UID/GID (will be overridden by entrypoint if needed, but good to have)
