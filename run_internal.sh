@@ -47,8 +47,6 @@ usage() {
     echo "  users <start> <end>             Generate user activity summary"
     echo "  query-user <user> <date|range>  Query user GPU usage"
     echo "  list-users <date>               List all GPU users"
-    echo "  test                            Run tests"
-    echo "  verify                          Verify charts"
     echo "  archive [month]                 Archive data (default: previous month)"
     echo "  weekly-plot                     Generate plots for the last 7 days"
 }
@@ -109,15 +107,7 @@ quick_user_activity_summary('$1', '$2')
         validate_date "$1"
         python3 get_user_gpu_usage.py --list-users "$1"
         ;;
-    test)
-        cd visualization && python3 test_user_info.py
-        ;;
-    test-all)
-        cd test_cases && python3 run_all_tests.py
-        ;;
-    verify)
-        cd test_cases && python3 chart_verification.py
-        ;;
+
     archive)
         python3 scripts/archive_data.py "${@:2}"
         ;;
