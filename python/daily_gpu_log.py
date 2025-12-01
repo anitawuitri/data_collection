@@ -25,7 +25,7 @@ from urllib.parse import urlencode
 class GPUDataCollector:
     """AMD GPU 數據收集器"""
     
-    def __init__(self, data_dir="./data"):
+    def __init__(self, data_dir="/app/data"):
         self.data_dir = Path(data_dir)
         
         # 節點配置
@@ -255,7 +255,11 @@ class GPUDataCollector:
     def process_gpu_data(self, ip, name, date_str, timestamp_start, timestamp_end):
         """處理單一節點的 GPU 數據"""
         ip_outdir = self.data_dir / name / date_str
-        ip_outdir.mkdir(parents=True, exist_ok=True)
+        try:
+            ip_outdir.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            print(f"錯誤：無法創建目錄 {ip_outdir}，權限不足")
+            raise
         
         netdata_host = f"http://{ip}:19999"
         
@@ -592,8 +596,8 @@ def main():
     
     parser.add_argument(
         '--data-dir',
-        default='./data',
-        help='數據輸出目錄 (預設: ./data)'
+        default='/app/data',
+        help='數據輸出目錄 (預設: /app/data)'
     )
     
     parser.add_argument(

@@ -129,6 +129,9 @@ class GPUUsageTrendAnalyzer:
         try:
             df = pd.read_csv(file_path, encoding='utf-8')
             
+            # 清除列名空白
+            df.columns = df.columns.str.strip()
+            
             # 處理新的 CSV 格式（包含使用者資訊）
             if 'GPU編號' in df.columns and '平均GPU使用率(%)' in df.columns:
                 df = df.rename(columns={
@@ -385,7 +388,9 @@ class GPUUsageTrendAnalyzer:
                         
                         # 收集使用者資訊
                         if show_users and 'user' in row and pd.notna(row['user']):
-                            user_info[gpu_key] = row['user']
+                            user_val = str(row['user']).strip()
+                            if user_val and user_val.lower() != 'nan':
+                                user_info[gpu_key] = user_val
         
         if not all_data:
             print("未找到數據進行熱力圖繪製")
